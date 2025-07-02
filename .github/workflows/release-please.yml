@@ -22,7 +22,7 @@ jobs:
         id: release
         with:
           release-type: python
-          package-name: ${project_name}
+          package-name: WatM-DT
 
   # 发布到 pypi
   publish-pypi:
