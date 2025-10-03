@@ -24,3 +24,16 @@ report:
 
 configure-project:
 	@poetry run python scripts/configure_project.py
+
+.PHONY: preprocess
+preprocess:
+	@echo "Converting CSV dataset to Parquet..."
+	@poetry run python scripts/preprocess_to_parquet.py \
+		--data-dir /Users/songshgeo/Documents/VSCode/WatM-DT/data \
+		--out-dir /Users/songshgeo/Documents/VSCode/WatM-DT/data_parquet \
+		--excel /Users/songshgeo/Documents/VSCode/WatM-DT/scenario_combinations3.xlsx
+
+.PHONY: dash
+dash:
+	@echo "Starting Dash app at http://127.0.0.1:8050 ..."
+	@poetry run python scripts/dash_app.py --data-parquet /Users/songshgeo/Documents/VSCode/WatM-DT/data_parquet --data-dir /Users/songshgeo/Documents/VSCode/WatM-DT/data --host 127.0.0.1 --port 8050

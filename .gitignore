@@ -133,3 +133,6 @@ dmypy.json
 # Temporary files
 tmp
 data
+.DS_Store
+data.zip
+data_parquet
