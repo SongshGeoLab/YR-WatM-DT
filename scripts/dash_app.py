@@ -20,6 +20,7 @@ from typing import List
 import plotly.graph_objects as go
 import polars as pl
 from dash import Dash, Input, Output, dcc, html
+from dash import ALL
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,6 +86,13 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
         scenarios_df.get_column("scenario_name").cast(pl.Utf8).unique().sort().to_list()
     )
 
+    # Parameter columns (all columns except scenario_name)
+    param_cols = [c for c in scenarios_df.columns if c != "scenario_name"]
+    # Unique sorted values per parameter
+    param_values = {p: scenarios_df.get_column(p).unique().sort().to_list() for p in param_cols}
+    # Baseline defaults from first row
+    baseline = scenarios_df.head(1).to_dicts()[0]
+
     variables = read_variables_from_metadata(data_dir / "metadata.json")
     variables = sorted(variables)
 
@@ -107,31 +115,49 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
                             ),
                         ],
                         style={
-                            "width": "48%",
+                            "width": "32%",
                             "display": "inline-block",
                             "verticalAlign": "top",
                         },
                     ),
                     html.Div(
                         [
-                            html.Label("Scenario"),
+                            html.Label("Scenario (auto from parameters)"),
+                            dcc.Input(id="scenario", type="text", readOnly=True, style={"width": "100%"}),
+                        ],
+                        style={
+                            "width": "32%",
+                            "display": "inline-block",
+                            "marginLeft": "2%",
+                            "verticalAlign": "top",
+                        },
+                    ),
+                ],
+                style={"marginBottom": "12px"},
+            ),
+            html.Details([html.Summary("Parameters (select values to locate scenario)")]),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(p),
                             dcc.Dropdown(
-                                id="scenario",
-                                options=[
-                                    {"label": s, "value": s} for s in scenario_names
-                                ],
-                                value=scenario_names[0] if scenario_names else None,
+                                id={"type": "param", "name": p},
+                                options=[{"label": str(v), "value": v} for v in param_values[p]],
+                                value=baseline.get(p),
                                 clearable=False,
                             ),
                         ],
                         style={
-                            "width": "48%",
+                            "width": "32%",
                             "display": "inline-block",
-                            "marginLeft": "4%",
+                            "marginRight": "2%",
                             "verticalAlign": "top",
                         },
-                    ),
-                ]
+                    )
+                    for p in param_cols
+                ],
+                style={"marginBottom": "12px"},
             ),
             dcc.Graph(id="series-plot", style={"height": "70vh"}),
         ],
@@ -140,18 +166,32 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
 
     @app.callback(
         Output("series-plot", "figure"),
+        Output("scenario", "value"),
         Input("variable", "value"),
-        Input("scenario", "value"),
+        Input({"type": "param", "name": ALL}, "value"),
+        prevent_initial_call=False,
     )
-    def update_figure(variable: str, scenario_name: str):  # noqa: D401
-        """Update the time series figure for the selected variable and scenario."""
-        if not variable or not scenario_name:
-            return go.Figure()
+    def update_figure_from_params(variable: str, selected_values: list):  # noqa: D401
+        """Update figure and resolved scenario based on selected parameters."""
+        if not variable or not selected_values:
+            return go.Figure(), ""
+
+        # Build filter expression in the order of param_cols used in layout
+        conditions = [pl.col(p) == v for p, v in zip(param_cols, selected_values)]
+        if not conditions:
+            return go.Figure(), ""
+        matched = scenarios_df.filter(pl.all_horizontal(conditions))
+        if matched.height == 0:
+            fig = go.Figure()
+            fig.update_layout(title="No scenario matches the selected parameters")
+            return fig, ""
+        scenario_name = matched.get_column("scenario_name").item()
+
         var_path = data_parquet / f"{variable}.parquet"
         if not var_path.exists():
             fig = go.Figure()
             fig.update_layout(title=f"Missing Parquet for variable: {variable}")
-            return fig
+            return fig, scenario_name
 
         df = pl.read_parquet(var_path).filter(pl.col("scenario_name") == scenario_name)
         df = df.join(time_df, on="step", how="left").sort("step")
@@ -170,7 +210,7 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
             yaxis_title=variable,
             margin=dict(l=40, r=20, t=60, b=40),
         )
-        return fig
+        return fig, scenario_name
 
     return app
 
