@@ -136,3 +136,14 @@ data
 .DS_Store
 data.zip
 data_parquet
+
+# -------- Frontend (viz/) --------
+viz/node_modules/
+viz/.vite/
+viz/dist/
+viz/build/
+viz/.cache/
+viz/.eslintcache
+viz/.turbo/
+viz/.env.local
+viz/.env.*.local
