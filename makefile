@@ -88,3 +88,35 @@ kill-vite:
 	pkill -f "vite" 2>/dev/null || true; \
 	pkill -f "node .*vite" 2>/dev/null || true; \
 	echo "Done."
+
+# Frontend development commands
+.PHONY: viz-install
+viz-install:
+	@echo "Installing frontend dependencies..."
+	@cd viz && npm install
+
+.PHONY: viz
+viz:
+	@echo "Starting frontend dev server at http://localhost:5173 ..."
+	@cd viz && npm run dev
+
+.PHONY: viz-build
+viz-build:
+	@echo "Building frontend for production..."
+	@cd viz && npm run build
+
+# Full-stack development: Start both backend API and frontend
+.PHONY: dev
+dev:
+	@echo "Starting full-stack development environment..."
+	@echo "Backend API will run on http://127.0.0.1:8000"
+	@echo "Frontend will run on http://localhost:5173"
+	@make -j2 api viz
+
+# Clean up all development servers
+.PHONY: clean-dev
+clean-dev:
+	@echo "Stopping all development servers..."
+	@make kill-port PORT=8000
+	@make kill-vite PORTS="5173 3000 3001"
+	@echo "All servers stopped."
