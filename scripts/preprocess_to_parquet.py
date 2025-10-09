@@ -148,6 +148,14 @@ def build_scenarios_parquet(excel_path: Path, out_dir: Path, compression: str) -
             .drop("row_id")
         )
 
+    # Round all float columns to 2 decimal places to avoid floating-point precision issues
+    for col in scenarios.columns:
+        if col == "scenario_name":
+            continue
+        dtype = scenarios.schema[col]
+        if dtype in (pl.Float32, pl.Float64):
+            scenarios = scenarios.with_columns(pl.col(col).round(2))
+
     scenarios = scenarios.with_columns(pl.col("scenario_name").cast(pl.Categorical))
     scenarios.write_parquet(out_dir / "scenarios.parquet", compression=compression)
 

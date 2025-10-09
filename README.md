@@ -1,295 +1,404 @@
-# WatM-DT
+# WatM-DT: Water Management Decision Theater
 
-**Water Management Decision Theater** - 水资源管理决策剧场
+## Project Overview
 
-An interactive data visualization platform for water resource analysis, featuring a FastAPI backend and React frontend with real-time Plotly visualizations.
-
-## 🎯 Features
-
-- 📊 **Interactive Visualizations** - Plotly-based charts for time series, spatial analysis
-- 🔄 **Real-time Data API** - FastAPI server with Parquet-backed data storage
-- 🎨 **Modern UI** - React + TypeScript + Tailwind CSS + shadcn/ui
-- 🎭 **Figma Integration** - Direct sync with Figma designs via MCP
-- 📈 **Scenario Analysis** - Multi-parameter scenario exploration
-- 🌊 **Water Resource Metrics** - WSI, availability, demand, quality analysis
-
-## 🚀 Quick Start
-
-### Full-Stack Development (Recommended)
-
-```bash
-# Install dependencies
-poetry install
-cd viz && npm install && cd ..
-
-# Start both backend API and frontend dev server
-make dev
-```
-
-This starts:
-- Backend API: http://127.0.0.1:8000
-- Frontend: http://localhost:5173
-- API Docs: http://127.0.0.1:8000/docs
-
-### Step-by-Step Setup
-
-```bash
-# 1. Data preprocessing (first time only)
-make preprocess
-
-# 2. Start backend API
-make api
-
-# 3. Start frontend (in another terminal)
-make viz
-```
-
-## 📁 Project Structure
-
-```
-WatM-DT/
-├── scripts/
-│   ├── api_server.py              # FastAPI backend server
-│   ├── dash_app.py                # Dash visualization (alternative)
-│   └── preprocess_to_parquet.py   # Data preprocessing
-├── viz/                            # React frontend
-│   ├── src/
-│   │   ├── App.tsx                # Main application
-│   │   ├── components/            # UI components
-│   │   ├── services/api.ts        # Backend API client
-│   │   └── hooks/useApiData.ts    # React hooks for data
-│   └── package.json
-├── data/                           # Source CSV data
-├── data_parquet/                   # Processed Parquet data
-├── makefile                        # Development commands
-├── WORKFLOW.md                     # Detailed workflow guide
-└── FIGMA_COLLABORATION_GUIDE.md   # Figma integration guide
-```
-
-## 🔧 Development Commands
-
-```bash
-# Data preprocessing
-make preprocess              # Convert CSV to Parquet
-
-# Development
-make dev                     # Start backend + frontend
-make api                     # Start backend only
-make viz                     # Start frontend only
-make dash                    # Start Dash app (alternative UI)
-
-# Build
-make viz-build              # Build frontend for production
-
-# Cleanup
-make clean-dev              # Stop all dev servers
-make kill-port PORT=8000    # Kill process on specific port
-make kill-vite              # Kill frontend dev servers
-```
-
-## 🎨 Figma Integration
-
-This project supports direct integration with Figma via Model Context Protocol (MCP).
-
-**Benefits:**
-- ✅ Real-time design sync
-- ✅ Auto-generate React components from designs
-- ✅ No manual copy-paste needed
-
-**Usage:**
-
-```
-Tell Cursor AI:
-"Create a new WaterQuality page from Figma node-id=123:456"
-```
-
-See [FIGMA_COLLABORATION_GUIDE.md](./FIGMA_COLLABORATION_GUIDE.md) for detailed instructions.
-
-## 📡 API Documentation
-
-### Backend Endpoints
-
-**Base URL:** http://127.0.0.1:8000
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | API information |
-| `/variables` | GET | List available variables |
-| `/params` | GET | Get parameter options |
-| `/resolve_scenario` | POST | Resolve scenario from parameters |
-| `/time` | GET | Get time vector |
-| `/series` | GET | Get time series data |
-
-**Interactive Docs:** http://127.0.0.1:8000/docs (when API is running)
-
-### Frontend API Client
-
-```typescript
-import * as api from '@/services/api';
-
-// Fetch variables
-const variables = await api.getVariables();
-
-// Fetch time series
-const data = await api.getSeries('YRB WSI', 'sc_0', {
-  start_step: 0,
-  end_step: 100
-});
-```
-
-See [viz/README.md](./viz/README.md) for frontend documentation.
-
-## 📊 Data Flow
-
-```
-CSV/Excel Data
-    ↓ make preprocess
-Parquet Files (data_parquet/)
-    ↓ make api
-FastAPI Server (:8000)
-    ↓ HTTP/JSON
-React Frontend (:5173)
-    ↓ Plotly Charts
-User Browser
-```
-
-## 🎯 Example Usage
-
-### 1. View Interactive Visualizations
-
-```bash
-make dev
-# Open http://localhost:5173
-```
-
-### 2. Query API Directly
-
-```bash
-# Get available variables
-curl http://127.0.0.1:8000/variables
-
-# Get time series data
-curl "http://127.0.0.1:8000/series?variable=YRB%20WSI&scenario=sc_0"
-```
-
-### 3. Integrate API in Components
-
-```typescript
-import { useSeries } from '@/hooks/useApiData';
-
-function MyComponent() {
-  const { data, loading, error } = useSeries('YRB WSI', 'sc_0');
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-
-  return <PlotlyChart data={[{
-    x: data.series.time,
-    y: data.series.value,
-    type: 'scatter'
-  }]} />;
-}
-```
-
-## 🤝 Collaboration Workflow
-
-### Working with Cursor AI + Figma MCP
-
-**Recommended approach:**
-
-1. **Design in Figma**
-   - Create or update designs
-   - Copy node link (right-click → Copy link to selection)
-
-2. **Tell Cursor AI**
-   ```
-   Create/update [Component] from Figma:
-   https://figma.com/design/xxx?node-id=123-456
-
-   Requirements:
-   - [Feature 1]
-   - [API integration needs]
-   - [Special behaviors]
-   ```
-
-3. **AI handles everything**
-   - Fetches Figma design
-   - Generates React component
-   - Integrates API calls
-   - Adds to routing
-
-See [WORKFLOW.md](./WORKFLOW.md) for detailed development workflows.
-
-## 📚 Documentation
-
-- [WORKFLOW.md](./WORKFLOW.md) - Complete development workflow guide
-- [FIGMA_COLLABORATION_GUIDE.md](./FIGMA_COLLABORATION_GUIDE.md) - Figma integration
-- [viz/README.md](./viz/README.md) - Frontend documentation
-- [API Docs](http://127.0.0.1:8000/docs) - Interactive API documentation
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Python 3.11+** with Poetry
-- **FastAPI** - Modern async web framework
-- **Polars** - Fast DataFrame library
-- **Parquet** - Columnar storage format
-- **Uvicorn** - ASGI server
-
-### Frontend
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Vite 6** - Build tool
-- **Tailwind CSS** - Styling
-- **shadcn/ui** - Component library
-- **Plotly.js** - Interactive charts
-
-### Integration
-- **Figma MCP** - Design sync
-- **CORS enabled** - Cross-origin requests
-
-## 🐛 Troubleshooting
-
-### Backend won't start
-```bash
-# Check port availability
-make kill-port PORT=8000
-
-# Reinstall dependencies
-poetry install
-
-# Verify data is preprocessed
-ls data_parquet/
-```
-
-### Frontend can't connect to API
-1. Verify backend is running: `curl http://127.0.0.1:8000/`
-2. Check CORS settings in `api_server.py`
-3. Check browser console for errors
-
-### Figma MCP not working
-1. Ensure Figma Desktop app is running (not browser)
-2. Verify MCP configuration in Cursor settings
-3. Check you have access to the Figma file
-
-### Full cleanup and restart
-```bash
-make clean-dev
-make preprocess
-make dev
-```
-
-## 📄 License
-
-See [LICENSE](./LICENSE) file.
-
-## 🙏 Acknowledgments
-
-- Yellow River Basin data sources
-- Plotly for visualization library
-- FastAPI for the excellent web framework
-- shadcn/ui for beautiful components
+A decision theater application for exploring water management scenarios in the Yellow River Basin (YRB), combining Python-based data processing with a React frontend for interactive visualization.
 
 ---
 
-**Ready to start?** Run `make dev` and open http://localhost:5173 🚀
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (viz/)                                                 │
+│  React + Vite + Plotly.js                                       │
+│  • Interactive charts and parameter controls                    │
+│  • 7 themed pages (Study Area, Water Availability, etc.)       │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTP/JSON
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Backend API (scripts/api_server.py)                            │
+│  FastAPI + Polars                                               │
+│  • GET /variables, /params, /time                              │
+│  • POST /resolve_scenario                                       │
+│  • GET /series (variable × scenario → time series)             │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ Reads
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Data Layer (data_parquet/)                                     │
+│  Columnar Parquet files                                         │
+│  • time.parquet: [step, time]                                  │
+│  • scenarios.parquet: [scenario_name, param1..paramN]          │
+│  • {variable}.parquet: [scenario_name, step, value, variable]  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Structure
+
+### Input (Raw CSV)
+
+Located in `data/`:
+- `TIME.csv`: 4725 scenarios × 1905 timesteps (years)
+- `scenario_combinations3.xlsx`: Parameter combinations → 4725 scenario rows
+- 12 variable CSVs (e.g., `Total population.csv`, `YRB available surface water.csv`): each 4725×1905
+
+### Preprocessed (Parquet)
+
+Generated by `scripts/preprocess_to_parquet.py` → `data_parquet/`:
+
+#### 1. **time.parquet**
+```
+┌──────┬──────────┐
+│ step │ time     │
+├──────┼──────────┤
+│ 0    │ 1981.0   │
+│ 1    │ 1982.0   │
+│ ...  │ ...      │
+│ 1904 │ 2885.0   │
+└──────┴──────────┘
+```
+
+#### 2. **scenarios.parquet**
+```
+┌───────────────┬─────────────────────┬───────────────────┬─────┐
+│ scenario_name │ Fertility Variation │ water-saving ... │ ... │
+├───────────────┼─────────────────────┼───────────────────┼─────┤
+│ sc_0          │ 1.6                 │ 0.8               │ ... │
+│ sc_1          │ 1.6                 │ 0.8               │ ... │
+│ ...           │ ...                 │ ...               │ ... │
+│ sc_4724       │ 1.8                 │ 1.0               │ ... │
+└───────────────┴─────────────────────┴───────────────────┴─────┘
+```
+
+#### 3. **Variable Parquet** (e.g., `Total population.parquet`)
+```
+┌───────────────┬──────┬────────────┬──────────────────┐
+│ scenario_name │ step │ value      │ variable         │
+├───────────────┼──────┼────────────┼──────────────────┤
+│ sc_0          │ 0    │ 450000000  │ Total population │
+│ sc_0          │ 1    │ 451200000  │ Total population │
+│ ...           │ ...  │ ...        │ ...              │
+└───────────────┴──────┴────────────┴──────────────────┘
+```
+Each variable file contains ~9M rows (4725 scenarios × 1905 steps).
+
+---
+
+## API Endpoints
+
+### Base URL
+`http://127.0.0.1:8000` (default)
+
+### Endpoints
+
+#### GET `/variables`
+Returns list of available variables (excludes TIME).
+```json
+[
+  "GDP per capita",
+  "Total population",
+  "YRB available surface water",
+  ...
+]
+```
+
+#### GET `/params`
+Returns parameter names and their unique values.
+```json
+{
+  "Fertility Variation": [1.6, 1.7, 1.8],
+  "water-saving irrigation efficiency ratio": [0.8, 0.9, 1.0],
+  ...
+}
+```
+
+#### POST `/resolve_scenario`
+Resolve scenario name from parameter values.
+```json
+// Request
+{
+  "values": {
+    "Fertility Variation": 1.6,
+    "water-saving irrigation efficiency ratio": 0.8,
+    ...
+  }
+}
+
+// Response
+{
+  "scenario_name": "sc_0"
+}
+```
+
+#### GET `/time`
+Returns time vector.
+```json
+[
+  {"step": 0, "time": 1981.0},
+  {"step": 1, "time": 1982.0},
+  ...
+]
+```
+
+#### GET `/series?variable={var}&scenario={sc}&start_step={n}&end_step={m}`
+Returns time series for a variable under a scenario.
+```json
+{
+  "variable": "Total population",
+  "scenario": "sc_0",
+  "series": {
+    "time": [1981.0, 1982.0, ...],
+    "value": [450000000, 451200000, ...]
+  }
+}
+```
+
+---
+
+## Frontend Structure
+
+```
+viz/
+├── src/
+│   ├── main.tsx                              # Entry point
+│   ├── App.tsx                               # Main app with 7-page tabs
+│   ├── components/
+│   │   ├── charts/
+│   │   │   ├── PlotlyChart.tsx              # Reusable Plotly wrapper
+│   │   │   └── BasicChart.tsx               # Fallback chart component
+│   │   ├── WaterAvailabilityPageWorking.tsx # Page 2 (with backend integration)
+│   │   ├── DemographyPageWorking.tsx        # Page 3 (with backend integration)
+│   │   └── ui/                              # shadcn/Radix UI components
+│   ├── services/
+│   │   └── api.ts                           # API client functions
+│   ├── hooks/
+│   │   └── useApiData.ts                    # Data fetching hooks
+│   └── styles/
+│       └── globals.css                      # Global styles
+├── package.json
+├── vite.config.ts
+└── index.html
+```
+
+### Key Components
+
+#### PlotlyChart
+Reusable Plotly component accepting standard props:
+```tsx
+<PlotlyChart
+  id="unique-chart-id"
+  title="Chart Title"
+  height="400px"
+  data={plotlyData}    // Plotly.Data[]
+  layout={plotlyLayout}  // Partial<Plotly.Layout>
+  config={{ responsive: true, displaylogo: false }}
+/>
+```
+
+#### Working Pages
+- `WaterAvailabilityPageWorking.tsx`: Fetches "YRB available surface water" and renders Plotly time series
+- `DemographyPageWorking.tsx`: Fetches "Total population" with "Reload" button for manual retries
+
+---
+
+## Quick Start
+
+### 1. Preprocess Data
+Convert raw CSVs to Parquet (one-time setup):
+```bash
+make preprocess
+```
+This generates `data_parquet/` from `data/` + `scenario_combinations3.xlsx`.
+
+### 2. Start Backend API
+```bash
+make api
+# Runs on http://127.0.0.1:8000
+# Visit http://127.0.0.1:8000/docs for interactive API docs
+```
+
+### 3. Start Frontend
+```bash
+cd viz
+npm install
+npm run dev
+# Opens http://localhost:3000 (or 3001/3002 if ports busy)
+```
+
+### 4. Explore
+- Navigate to **Page 2** (Water Availability) or **Page 3** (Demography)
+- Charts auto-load data from backend; fallback to demo data on error
+- Check browser Console for `[Demography]` logs and Network tab for API calls
+
+---
+
+## Workflow for Design Iteration
+
+### 1. Developer (You)
+- Modify backend endpoints in `scripts/api_server.py`
+- Update data processing in `scripts/preprocess_to_parquet.py`
+- Keep backend running: `make api`
+
+### 2. Designer (Figma Collaboration)
+- Works in `viz/src/` (all source code tracked in Git)
+- Adjusts layouts, styles, UI components
+- Runs `npm run dev` locally to preview changes
+
+### 3. Sync Workflow
+```bash
+# You commit API + data processing changes
+git add scripts/ data_parquet/ pyproject.toml makefile
+git commit -m "feat: add new variable endpoint"
+
+# Designer commits frontend changes
+cd viz
+git add src/
+git commit -m "style: update page 3 layout"
+
+# Both push/pull to sync
+git push origin master
+git pull origin master
+```
+
+---
+
+## File Naming Conventions
+
+### Variables
+Variable names match metadata.json and API responses:
+- Use exact case and spacing (e.g., `"Total population"`, `"YRB available surface water"`)
+- URL-encode in API calls: `encodeURIComponent(variableName)`
+
+### Scenarios
+Auto-generated as `sc_0` to `sc_4724` based on parameter combinations.
+
+---
+
+## Dependencies
+
+### Backend (Python)
+```toml
+# pyproject.toml
+python = ">=3.11"
+polars = "^1.31.0"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.30.6"}
+pyarrow = "^21.0.0"
+```
+
+Install: `poetry install`
+
+### Frontend (Node.js)
+```json
+// viz/package.json
+"react": "^18.3.1"
+"plotly.js-dist-min": "^2.35.2"
+"@radix-ui/react-*": "^1.x" (shadcn/ui)
+"vite": "6.3.5"
+```
+
+Install: `cd viz && npm install`
+
+---
+
+## Troubleshooting
+
+### Frontend doesn't show data
+1. Check backend is running: visit `http://127.0.0.1:8000/variables`
+2. Check browser Console for `[Demography]` logs
+3. Check Network tab for `/params`, `/resolve_scenario`, `/series` requests
+4. Hard refresh: `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
+
+### Port conflicts
+- Backend: Change port in `makefile` or run `poetry run uvicorn scripts.api_server:app --port 8001`
+- Frontend: Vite auto-increments (3000→3001→3002...), or set in `vite.config.ts`
+
+### CORS errors
+Backend already allows all origins (`allow_origins=["*"]`). If still blocked, check browser console for exact error.
+
+---
+
+## Analysis Workflow (Python/Jupyter)
+
+### ScenarioQuery API
+
+Use `scripts/query_scenarios.py` to filter and extract data for analysis:
+
+```python
+from scripts.query_scenarios import ScenarioQuery, quick_query, compare_params
+
+# Initialize query engine
+query = ScenarioQuery("data_parquet")
+
+# List available variables and parameters
+query.list_variables()
+query.param_cols
+
+# Filter scenarios by parameter constraints
+filtered = query.filter_scenarios({
+    "Fertility Variation": 1.6,
+    "Climate change scenario switch for water yield": 1
+})
+print(f"Matching scenarios: {filtered.height}")
+
+# Get time series for variable(s) under constraints
+data = query.get_series(
+    variables=["Total population", "YRB WSI"],
+    filters={"Fertility Variation": 1.6},
+    time_range=(2020, 2050)
+)
+
+# Compare parameter impact (wide format for plotting)
+comparison = compare_params(
+    variable="YRB WSI",
+    fixed_params={"Fertility Variation": 1.6, "Diet change scenario switch": 1},
+    vary_param="water-saving irrigation efficiency ratio",
+    time_range=(2020, 2100)
+)
+# Result: rows=time, columns=parameter values (0.8, 0.9, 1.0)
+```
+
+See `reports/example_usage.ipynb` for complete examples.
+
+### Key Methods
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `filter_scenarios(filters)` | Get scenarios matching parameter constraints | DataFrame of scenarios |
+| `get_series(variables, filters, time_range)` | Get time series in long format | DataFrame [scenario, variable, step, time, value, params...] |
+| `get_series_wide(variable, filters, columns_col)` | Get time series pivoted for comparison | DataFrame [time, param_val_1, param_val_2, ...] |
+| `list_variables()` | List all available variables | List of strings |
+| `get_param_summary(filters)` | Summarize parameter distributions | DataFrame of parameter stats |
+
+---
+
+## Next Steps
+
+### For Backend
+- Add batch endpoints: `GET /series/batch` for multiple variables/scenarios
+- Implement downsampling (LTTB algorithm) for large time series
+- Add statistical bands (p10/p90) for scenario ensembles
+
+### For Frontend
+- Connect parameter controls to `POST /resolve_scenario` and update charts dynamically
+- Add multi-variable comparison (overlay multiple series)
+- Implement export (PNG/CSV download)
+- Add remaining 5 pages (Ecological Water, Agriculture, Water Stress, etc.)
+
+---
+
+## License
+
+MIT
+
+---
+
+## Contact
+
+Maintained by SongshGeo <songshgeo@gmail.com>
+
+For issues or questions, see project repository or open an issue.
