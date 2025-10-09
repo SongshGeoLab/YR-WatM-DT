@@ -38,6 +38,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+import json
 
 import polars as pl
 
@@ -67,6 +68,11 @@ class ScenarioQuery:
         
         # Extract parameter columns (all except scenario_name)
         self.param_cols = [c for c in self.scenarios.columns if c != "scenario_name"]
+        # Load variable name mapping (original -> safe)
+        self.variables_map_path = self.data_dir / "variables_map.json"
+        self.variables_map: Dict[str, str] = {}
+        if self.variables_map_path.exists():
+            self.variables_map = json.loads(self.variables_map_path.read_text(encoding="utf-8"))
     
     def filter_scenarios(
         self, 
@@ -151,7 +157,9 @@ class ScenarioQuery:
         # Load and concatenate variable data
         dfs = []
         for var in variables:
-            var_file = self.data_dir / f"{var}.parquet"
+            # Support original name or safe name
+            safe = self.variables_map.get(var, var)
+            var_file = self.data_dir / f"{safe}.parquet"
             if not var_file.exists():
                 raise FileNotFoundError(f"Variable file not found: {var_file}")
             
@@ -272,11 +280,12 @@ class ScenarioQuery:
             List of variable names (filenames without .parquet extension).
         """
         parquet_files = list(self.data_dir.glob("*.parquet"))
-        variables = [
-            f.stem for f in parquet_files 
-            if f.stem not in ["time", "scenarios"]
-        ]
-        return sorted(variables)
+        variables = [f.stem for f in parquet_files if f.stem not in ["time", "scenarios"]]
+        # Prefer original names if mapping exists
+        if self.variables_map:
+            inv = {v: k for k, v in self.variables_map.items()}
+            variables = [inv.get(v, v) for v in variables]
+        return sorted(set(variables))
 
 
 # ---------------------- Convenience Functions ----------------------

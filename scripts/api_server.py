@@ -28,6 +28,7 @@ import geopandas as gpd
 DATA_PARQUET = Path("data_parquet")
 DATA_DIR = Path("data")
 GEOJSON_CACHE = {}
+_VARIABLES_MAP_CACHE: Optional[Dict[str, str]] = None  # original_name -> safe_name
 
 
 def _read_variables() -> List[str]:
@@ -42,6 +43,40 @@ def _read_variables() -> List[str]:
             continue
         names.append(name)
     return sorted(names)
+
+
+def _read_variables_map() -> Dict[str, str]:
+    """Read mapping of original variable name -> safe variable name.
+
+    Returns empty dict if mapping file doesn't exist (backward compatible).
+    """
+    global _VARIABLES_MAP_CACHE
+    if _VARIABLES_MAP_CACHE is not None:
+        return _VARIABLES_MAP_CACHE
+    map_path = DATA_PARQUET / "variables_map.json"
+    if map_path.exists():
+        _VARIABLES_MAP_CACHE = json.loads(map_path.read_text(encoding="utf-8"))
+    else:
+        _VARIABLES_MAP_CACHE = {}
+    return _VARIABLES_MAP_CACHE
+
+
+def _resolve_variable_to_path(variable: str) -> Path:
+    """Resolve a requested variable name (original or safe) to a Parquet path."""
+    mapping = _read_variables_map()
+    # If original name provided
+    if variable in mapping:
+        safe = mapping[variable]
+        path = DATA_PARQUET / f"{safe}.parquet"
+        if path.exists():
+            return path
+    # If safe name provided
+    path = DATA_PARQUET / f"{variable}.parquet"
+    if path.exists():
+        return path
+    # Fallback to original file naming (legacy)
+    path = DATA_PARQUET / f"{variable}.parquet"
+    return path
 
 
 def _read_scenarios() -> pl.DataFrame:
@@ -114,6 +149,7 @@ def root() -> dict:
         "docs": "/docs",
         "endpoints": [
             "/variables",
+            "/variables_map",
             "/params",
             "/resolve_scenario",
             "/time",
@@ -136,6 +172,12 @@ def get_basin_geojson() -> dict:
 @app.get("/variables")
 def get_variables() -> List[str]:
     return _read_variables()
+
+
+@app.get("/variables_map")
+def get_variables_map() -> Dict[str, str]:
+    """Return mapping of original variable name -> safe variable name."""
+    return _read_variables_map()
 
 
 @app.get("/params")
@@ -185,12 +227,10 @@ def get_series(
     start_step: Optional[int] = Query(None, ge=0),
     end_step: Optional[int] = Query(None, ge=0),
 ) -> Dict[str, object]:
-    variables = set(_read_variables())
-    if variable not in variables:
-        raise HTTPException(status_code=400, detail=f"Unknown variable: {variable}")
-    var_path = DATA_PARQUET / f"{variable}.parquet"
+    # Allow original or safe variable names
+    var_path = _resolve_variable_to_path(variable)
     if not var_path.exists():
-        raise HTTPException(status_code=404, detail="Variable parquet not found")
+        raise HTTPException(status_code=404, detail=f"Variable parquet not found for '{variable}'")
 
     df = pl.read_parquet(var_path).filter(pl.col("scenario_name") == scenario)
     if df.height == 0:

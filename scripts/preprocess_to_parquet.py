@@ -26,7 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Dict
 
 import polars as pl
 
@@ -90,6 +90,23 @@ def read_metadata(metadata_path: Path) -> Tuple[List[Tuple[str, str]], dict]:
         _, variable_name, filename = outcome[:3]
         pairs.append((variable_name, filename))
     return pairs, meta
+
+
+def make_safe_name(name: str) -> str:
+    """Convert a human-readable variable name to a filesystem/identifier-safe name.
+
+    Rules:
+    - lower case
+    - replace any non-alphanumeric with underscore
+    - collapse multiple underscores
+    - trim leading/trailing underscores
+    """
+    import re
+
+    safe = name.lower()
+    safe = re.sub(r"[^a-z0-9]+", "_", safe)
+    safe = re.sub(r"_+", "_", safe).strip("_")
+    return safe
 
 
 def ensure_out_dir(out_dir: Path) -> None:
@@ -206,6 +223,16 @@ def process_variables_to_parquet(
         variables: Iterable of (variable_name, filename) pairs
         compression: Parquet compression codec
     """
+    # Build mapping original_name -> safe_name and write to variables_map.json
+    variables_map: Dict[str, str] = {}
+    for variable_name, _ in variables:
+        if variable_name == "TIME":
+            continue
+        variables_map[variable_name] = make_safe_name(variable_name)
+    (out_dir / "variables_map.json").write_text(
+        json.dumps(variables_map, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
     for variable_name, filename in variables:
         if variable_name == "TIME":
             # TIME handled separately
@@ -217,7 +244,8 @@ def process_variables_to_parquet(
         print(f"[INFO] Converting {variable_name} <- {csv_path.name}")
         long_df = wide_csv_to_long_df(csv_path, variable_name)
         # Write Parquet
-        out_file = out_dir / f"{variable_name}.parquet"
+        safe_name = variables_map.get(variable_name, make_safe_name(variable_name))
+        out_file = out_dir / f"{safe_name}.parquet"
         out_file.parent.mkdir(parents=True, exist_ok=True)
         long_df.write_parquet(out_file, compression=compression)
 

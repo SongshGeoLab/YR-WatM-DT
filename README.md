@@ -269,9 +269,30 @@ git pull origin master
 ## File Naming Conventions
 
 ### Variables
-Variable names match metadata.json and API responses:
-- Use exact case and spacing (e.g., `"Total population"`, `"YRB available surface water"`)
-- URL-encode in API calls: `encodeURIComponent(variableName)`
+We generate and use "safe variable names" for filenames and APIs while preserving original human-readable names:
+
+- Safe name rules: lowercase; non-alphanumeric → `_`; collapse multiple `_`; trim edges.
+- Parquet filenames use safe names, e.g. `data_parquet/yrb_available_surface_water.parquet`.
+- Mapping file: `data_parquet/variables_map.json` (original → safe).
+- API exposes `GET /variables_map` and accepts either original or safe name in `/series`.
+
+Examples (original → safe):
+
+```
+hydrologic station discharge[lijin]           → hydrologic_station_discharge_lijin
+YRB available surface water                   → yrb_available_surface_water
+sediment load[lijin]                          → sediment_load_lijin
+irrigation water demand province sum          → irrigation_water_demand_province_sum
+production water demand province sum          → production_water_demand_province_sum
+OA water demand province sum                  → oa_water_demand_province_sum
+domestic water demand province sum            → domestic_water_demand_province_sum
+GDP per capita                                → gdp_per_capita
+Total population                              → total_population
+YRB WSI                                       → yrb_wsi
+water consumption of province in YRB sum      → water_consumption_of_province_in_yrb_sum
+```
+
+Frontend/Notebook can display original names while using safe names for stable keys.
 
 ### Scenarios
 Auto-generated as `sc_0` to `sc_4724` based on parameter combinations.
@@ -362,7 +383,7 @@ comparison = compare_params(
 # Result: rows=time, columns=parameter values (0.8, 0.9, 1.0)
 ```
 
-See `reports/example_usage.ipynb` for complete examples.
+See `docs/example_usage.ipynb` for complete examples.
 
 ### Key Methods
 
