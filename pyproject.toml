@@ -20,6 +20,9 @@ pyarrow = "^21.0.0"
 dash = "^2.17.1"
 fastapi = "^0.115.0"
 uvicorn = {extras = ["standard"], version = "^0.30.6"}
+folium = "^0.20.0"
+geopandas = "^1.1.1"
+plotly = "^6.3.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2.1"

@@ -23,9 +23,11 @@ import polars as pl
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import geopandas as gpd
 
 DATA_PARQUET = Path("data_parquet")
 DATA_DIR = Path("data")
+GEOJSON_CACHE = {}
 
 
 def _read_variables() -> List[str]:
@@ -48,6 +50,49 @@ def _read_scenarios() -> pl.DataFrame:
 
 def _read_time() -> pl.DataFrame:
     return pl.read_parquet(DATA_PARQUET / "time.parquet")
+
+
+def _get_basin_geojson() -> dict:
+    """Read Yellow River Basin shapefile and return GeoJSON.
+    
+    Returns:
+        GeoJSON dict of the basin boundary.
+    """
+    if "basin" in GEOJSON_CACHE:
+        return GEOJSON_CACHE["basin"]
+    
+    # Try to find the shapefile from config
+    import os
+    from hydra import compose, initialize_config_dir
+    
+    config_path = Path("config").absolute()
+    try:
+        with initialize_config_dir(version_base=None, config_dir=str(config_path)):
+            cfg = compose(config_name="config.yaml")
+            shp_folder = Path(cfg.ds.yr_shp.folder).expanduser()
+            shp_file = shp_folder / cfg.ds.yr_shp.outlines.huanghe
+            
+            if not shp_file.exists():
+                raise FileNotFoundError(f"Shapefile not found: {shp_file}")
+            
+            gdf = gpd.read_file(shp_file)
+            
+            # Convert to WGS84 if not already
+            if gdf.crs and gdf.crs != "EPSG:4326":
+                gdf = gdf.to_crs("EPSG:4326")
+            
+            # Convert to GeoJSON
+            geojson = json.loads(gdf.to_json())
+            GEOJSON_CACHE["basin"] = geojson
+            return geojson
+            
+    except Exception as e:
+        # Fallback: return empty FeatureCollection
+        return {
+            "type": "FeatureCollection",
+            "features": [],
+            "error": str(e)
+        }
 
 
 app = FastAPI(title="Decision Theater API", version="0.1.0")
@@ -73,8 +118,19 @@ def root() -> dict:
             "/resolve_scenario",
             "/time",
             "/series?variable=YRB%20WSI&scenario=sc_0",
+            "/basin/geojson",
         ],
     }
+
+
+@app.get("/basin/geojson")
+def get_basin_geojson() -> dict:
+    """Get Yellow River Basin boundary as GeoJSON.
+    
+    Returns:
+        GeoJSON FeatureCollection of the basin boundary.
+    """
+    return _get_basin_geojson()
 
 
 @app.get("/variables")
