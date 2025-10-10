@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ParameterSliderProps {
   label: string;
@@ -22,6 +22,13 @@ export function ParameterSlider({
   onChange
 }: ParameterSliderProps) {
   const [value, setValue] = useState(defaultValue || min);
+
+  // Update internal state when defaultValue changes
+  useEffect(() => {
+    if (defaultValue !== undefined) {
+      setValue(defaultValue);
+    }
+  }, [defaultValue]);
 
   const handleChange = (newValue: number) => {
     setValue(newValue);

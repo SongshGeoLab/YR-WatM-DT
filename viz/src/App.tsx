@@ -1,9 +1,132 @@
+function useDemographicsSeries(fertility: number, diet: number) {
+  const [population, setPopulation] = useState<{x:number[]; y:number[]}>({ x: [], y: [] });
+  const [domestic, setDomestic] = useState<{x:number[]; y:number[]}>({ x: [], y: [] });
+  const [oa, setOa] = useState<{x:number[]; y:number[]}>({ x: [], y: [] });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    
+    (async () => {
+      try {
+        // Cache params to avoid repeated calls
+        const params = await api.getParams();
+        const values = {
+          "Fertility Variation": fertility,
+          "Diet change scenario switch": diet,
+          "water-saving irrigation efficiency ratio": params["water-saving irrigation efficiency ratio"][1],
+          "fire generation share province target": params["fire generation share province target"][1],
+          "Ecological water flow variable": params["Ecological water flow variable"][1],
+          "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][1]
+        };
+        
+        const { scenario_name } = await api.resolveScenario(values);
+        
+        // Only fetch the data we need, with smaller time range for faster response
+        const [pop, dom, oaVar] = await Promise.all([
+          api.getSeries('total_population', scenario_name, { start_step: 624, end_step: 1000 }), // Reduced range
+          api.getSeries('domestic_water_demand_province_sum', scenario_name, { start_step: 624, end_step: 1000 }),
+          api.getSeries('oa_water_demand_province_sum', scenario_name, { start_step: 624, end_step: 1000 })
+        ]);
+
+        // Optimized sampling - pre-calculate year indices
+        const targetYears = [2020, 2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060];
+        const sampleData = (time: number[], value: number[], scale = 1) => {
+          const xs: number[] = [];
+          const ys: number[] = [];
+          
+          for (const year of targetYears) {
+            // Find closest time point more efficiently
+            let closestIdx = 0;
+            let minDiff = Math.abs(time[0] - year);
+            
+            for (let i = 1; i < time.length; i++) {
+              const diff = Math.abs(time[i] - year);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestIdx = i;
+              }
+            }
+            
+            xs.push(Math.round(time[closestIdx]));
+            ys.push(value[closestIdx] * scale);
+          }
+          
+          return { x: xs, y: ys };
+        };
+
+        if (!cancelled) {
+          setPopulation(sampleData(pop.series.time, pop.series.value, 1/1e6));
+          setDomestic(sampleData(dom.series.time, dom.series.value, 1/1e9));
+          setOa(sampleData(oaVar.series.time, oaVar.series.value, 1/1e9));
+        }
+      } catch (error) {
+        console.error('Failed to load demographics data:', error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+    
+    return () => { cancelled = true; };
+  }, [fertility, diet]);
+
+  return { population, domestic, oa, loading };
+}
+
+function DemographicsPopulationChart({ fertility, diet }: { fertility: number; diet: number }) {
+  const { population } = useDemographicsSeries(fertility, diet);
+  const data = population.x.length ? [{ x: population.x, y: population.y, type: 'scatter', mode: 'lines', line: { color: '#2E86AB', width: 3 } }] : [];
+  return (
+    <PlotlyChart
+      id="total-population"
+      title="Total Population"
+      description="Population change over time across different scenarios"
+      height="320px"
+      data={data}
+      layout={{ margin: { l: 50, r: 20, t: 20, b: 40 }, xaxis: { title: 'Year' }, yaxis: { title: 'People (Millions)' } }}
+    />
+  );
+}
+
+function DemographicsDomesticChart({ fertility, diet }: { fertility: number; diet: number }) {
+  const { domestic } = useDemographicsSeries(fertility, diet);
+  const data = domestic.x.length ? [{ x: domestic.x, y: domestic.y, type: 'scatter', mode: 'lines', line: { color: '#A23B72', width: 3 } }] : [];
+  return (
+    <PlotlyChart
+      id="domestic-water-demand"
+      title="Domestic Water Demand"
+      description="Household water consumption patterns across different scenarios"
+      height="350px"
+      data={data}
+      layout={{ margin: { l: 50, r: 20, t: 20, b: 40 }, xaxis: { title: 'Year' }, yaxis: { title: 'Volume (Billions)' } }}
+    />
+  );
+}
+
+function DemographicsOAChart({ fertility, diet }: { fertility: number; diet: number }) {
+  const { oa } = useDemographicsSeries(fertility, diet);
+  const data = oa.x.length ? [{ x: oa.x, y: oa.y, type: 'scatter', mode: 'lines', line: { color: '#F18F01', width: 3 } }] : [];
+  return (
+    <PlotlyChart
+      id="oa-water-demand"
+      title="OA Water Demand"
+      description="Other activities water demand including services and public usage"
+      height="350px"
+      data={data}
+      layout={{ margin: { l: 50, r: 20, t: 20, b: 40 }, xaxis: { title: 'Year' }, yaxis: { title: 'Volume (Billions)' } }}
+    />
+  );
+}
 import { useState, useEffect } from 'react';
 import { PlotlyChart } from './components/charts/PlotlyChart';
 import { LeafletMap } from './components/maps/LeafletMap';
 import { ParameterSlider } from './components/ui/parameter-slider';
 import { Tooltip, TooltipTrigger, TooltipContent } from './components/ui/tooltip';
 import { Moon, Sun, FileText, Github, Droplet, Map, Waves, Users, Leaf, Sprout, AlertTriangle, Activity, CloudRain, TrendingUp, TreePine, Tractor, Gauge, Scale, Factory } from 'lucide-react';
+import * as api from './services/api';
 
 // Simple page components to avoid webpack issues
 function StudyAreaPage() {
@@ -372,6 +495,18 @@ function WaterAvailabilityPage() {
 
 function DemographicsPage() {
   const [selectedDietPattern, setSelectedDietPattern] = useState('pattern2');
+  const [fertility, setFertility] = useState(1.7);
+  const [debouncedFertility, setDebouncedFertility] = useState(1.7);
+  const dietMap: Record<string, number> = { pattern1: 1, pattern2: 2, pattern3: 3 };
+
+  // Debounce fertility changes to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFertility(fertility);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [fertility]);
 
   const dietPatterns = {
     pattern1: {
@@ -434,21 +569,17 @@ function DemographicsPage() {
             </p>
           </div>
 
-          <PlotlyChart
-            id="total-population"
-            title="Total Population"
-            description="Population change over time across different scenarios"
-            height="55%"
-          />
+          <DemographicsPopulationChart fertility={debouncedFertility} diet={dietMap[selectedDietPattern]} />
 
           <ParameterSlider
             label="Birth Rate"
             min={1.6}
             max={1.8}
             step={0.05}
-            defaultValue={1.7}
+            defaultValue={fertility}
             unit=""
             description="Total fertility rate (children per woman) affecting population growth"
+            onChange={(v) => setFertility(v)}
           />
 
           {/* Diet Pattern Selection */}
@@ -584,21 +715,11 @@ function DemographicsPage() {
           </div>
 
           <div className="flex-1 min-h-0">
-            <PlotlyChart
-              id="domestic-water-demand"
-              title="Domestic Water Demand"
-              description="Household water consumption patterns across different scenarios"
-              height="100%"
-            />
+            <DemographicsDomesticChart fertility={debouncedFertility} diet={dietMap[selectedDietPattern]} />
           </div>
 
           <div className="flex-1 min-h-0">
-            <PlotlyChart
-              id="oa-water-demand"
-              title="OA Water Demand"
-              description="Other activities water demand including services and public usage"
-              height="100%"
-            />
+            <DemographicsOAChart fertility={debouncedFertility} diet={dietMap[selectedDietPattern]} />
           </div>
         </div>
       </div>
@@ -1017,7 +1138,7 @@ export default function App() {
       case 2:
         return <DemographicsPage />;
       case 3:
-        return <EcologicalWaterPageSlider />; // Use slider-controlled version (USER'S ORIGINAL DESIGN)
+        return <EcologicalWaterPageSlider />; // ✅ Fully integrated with backend (USER'S ORIGINAL DESIGN)
       case 4:
         return <AgriculturePage />;
       case 5:

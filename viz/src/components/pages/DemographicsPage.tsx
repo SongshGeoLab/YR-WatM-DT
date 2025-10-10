@@ -1,17 +1,135 @@
+import { useState, useEffect, useCallback } from 'react';
+import * as api from '../../services/api';
+
 export default function DemographicsPage() {
-  // Mock demographic data
-  const years = [2020, 2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060];
-  const populationData = {
+  // Parameter states
+  const [fertilityValue, setFertilityValue] = useState<number>(1.7);
+  const [dietValue, setDietValue] = useState<number>(2);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Data states - keep structure compatible with existing SVG charts
+  const [years, setYears] = useState<number[]>([2020, 2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060]);
+  const [populationData, setPopulationData] = useState({
     total: [400, 405, 408, 410, 411, 410, 408, 405, 400],
     urban: [280, 295, 310, 325, 335, 340, 342, 340, 335],
     rural: [120, 110, 98, 85, 76, 70, 66, 65, 65]
-  };
-
-  const fertilityData = [85, 82, 78, 75, 72, 70, 68, 67, 66];
-  const waterConsumption = [180, 185, 190, 195, 200, 205, 210, 212, 215];
+  });
+  const [fertilityData, setFertilityData] = useState([85, 82, 78, 75, 72, 70, 68, 67, 66]);
+  const [waterConsumption, setWaterConsumption] = useState([180, 185, 190, 195, 200, 205, 210, 212, 215]);
 
   const maxPopulation = Math.max(...populationData.total);
   const maxConsumption = Math.max(...waterConsumption);
+
+  // Load data from backend
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('[Demographics] Loading data for fertility:', fertilityValue, 'diet:', dietValue);
+
+      const params = await api.getParams();
+      console.log('[Demographics] Got params:', Object.keys(params));
+
+      // Build parameter values
+      const values: api.ParameterValues = {
+        "Fertility Variation": fertilityValue,
+        "Diet change scenario switch": dietValue,
+        "water-saving irrigation efficiency ratio": params["water-saving irrigation efficiency ratio"][1],
+        "fire generation share province target": params["fire generation share province target"][1],
+        "Ecological water flow variable": params["Ecological water flow variable"][1],
+        "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][1]
+      };
+
+      console.log('[Demographics] Resolving scenario with values:', values);
+      const result = await api.resolveScenario(values);
+      const scenario_name = result.scenario_name;
+      console.log('[Demographics] Resolved scenario:', scenario_name);
+
+      // Fetch population and water data (2020-2060, every 5 years = 9 data points)
+      console.log('[Demographics] Fetching population data...');
+      const popSeries = await api.getSeries('total_population', scenario_name, { start_step: 624, end_step: 1264 });
+      console.log('[Demographics] Population data points:', popSeries.series.time.length);
+
+      console.log('[Demographics] Fetching water data...');
+      const waterSeries = await api.getSeries('domestic_water_demand_province_sum', scenario_name, { start_step: 624, end_step: 1264 });
+      console.log('[Demographics] Water data points:', waterSeries.series.time.length);
+
+      // Sample data every 5 years for display
+      const timeArray = popSeries.series.time;
+      const popArray = popSeries.series.value;
+      const waterArray = waterSeries.series.value;
+
+      // Sample indices for years: 2020, 2025, 2030, ..., 2060 (9 points)
+      const sampledYears: number[] = [];
+      const sampledPop: number[] = [];
+      const sampledWater: number[] = [];
+
+      for (let year = 2020; year <= 2060; year += 5) {
+        const idx = timeArray.findIndex(t => Math.abs(t - year) < 0.5);
+        if (idx >= 0) {
+          sampledYears.push(Math.round(timeArray[idx]));
+          sampledPop.push(popArray[idx] / 1e6); // Convert to millions
+          sampledWater.push(waterArray[idx] / 1e9); // Convert to billions for display
+        } else {
+          // If exact match not found, use closest value
+          const closestIdx = timeArray.reduce((closest, t, i) =>
+            Math.abs(t - year) < Math.abs(timeArray[closest] - year) ? i : closest, 0);
+          sampledYears.push(year);
+          sampledPop.push(popArray[closestIdx] / 1e6);
+          sampledWater.push(waterArray[closestIdx] / 1e9);
+        }
+      }
+
+      console.log('[Demographics] Sampled data:', { sampledYears, sampledPop, sampledWater });
+
+      setYears(sampledYears);
+      setPopulationData({
+        total: sampledPop,
+        urban: sampledPop.map(v => v * 0.7), // Assume 70% urban (placeholder)
+        rural: sampledPop.map(v => v * 0.3)  // Assume 30% rural (placeholder)
+      });
+      setWaterConsumption(sampledWater.map(v => v * 100)); // Scale for display
+
+      console.log('[Demographics] Data loaded successfully!');
+
+    } catch (err: any) {
+      console.error('[Demographics] Failed to load data:', err);
+      setError(err.message || 'Failed to load data from backend');
+      // Keep using mock data on error - ensure charts still display
+      console.log('[Demographics] Using mock data due to error');
+
+      // Ensure we have valid data for charts
+      setYears([2020, 2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060]);
+      setPopulationData({
+        total: [400, 405, 408, 410, 411, 410, 408, 405, 400],
+        urban: [280, 295, 310, 325, 335, 340, 342, 340, 335],
+        rural: [120, 110, 98, 85, 76, 70, 66, 65, 65]
+      });
+      setWaterConsumption([180, 185, 190, 195, 200, 205, 210, 212, 215]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fertilityValue, dietValue]);
+
+  useEffect(() => {
+    loadData();
+  }, [fertilityValue, dietValue]);
+
+  // Debug: Log current data state
+  useEffect(() => {
+    console.log('[Demographics] Current data state:', {
+      years,
+      populationData,
+      waterConsumption,
+      maxPopulation,
+      maxConsumption
+    });
+  }, [years, populationData, waterConsumption, maxPopulation, maxConsumption]);
+
+  // Available parameter values
+  const fertilityValues = [1.6, 1.65, 1.7, 1.75, 1.8];
+  const dietValues = [1, 2, 3];
+  const dietLabels = { 1: 'Traditional', 2: 'Transitional', 3: 'Modern' };
 
   return (
     <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 h-full">
@@ -22,7 +140,76 @@ export default function DemographicsPage() {
         <h2 className="text-3xl font-bold text-gray-900">Demography and Domestic Water Usage</h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100%-5rem)]">
+      {/* Parameter Controls */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Fertility Slider */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Fertility Rate: {fertilityValue.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min={1.6}
+              max={1.8}
+              step={0.05}
+              value={fertilityValue}
+              onChange={(e) => setFertilityValue(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              disabled={loading}
+            />
+            <div className="flex gap-1 mt-2">
+              {fertilityValues.map((val) => (
+                <button
+                  key={val}
+                  onClick={() => setFertilityValue(val)}
+                  disabled={loading}
+                  className={`px-2 py-1 text-xs rounded ${
+                    Math.abs(fertilityValue - val) < 0.01
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {val}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Diet Selection */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Diet Scenario: {dietLabels[dietValue as keyof typeof dietLabels]}
+            </label>
+            <div className="flex gap-2 mt-[0.7rem]">
+              {dietValues.map((val) => (
+                <button
+                  key={val}
+                  onClick={() => setDietValue(val)}
+                  disabled={loading}
+                  className={`flex-1 px-3 py-2 text-sm rounded ${
+                    dietValue === val
+                      ? 'bg-purple-500 text-white font-medium'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {val}. {dietLabels[val as keyof typeof dietLabels]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {loading && (
+          <div className="text-center text-sm text-gray-500 mt-2">Loading data...</div>
+        )}
+        {error && (
+          <div className="text-center text-sm text-red-500 mt-2">
+            Error: {error} (Using mock data)
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100%-14rem)]">
         {/* Left side - Population projections */}
         <div className="space-y-6">
           <div>
