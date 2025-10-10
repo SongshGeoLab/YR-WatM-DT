@@ -1,87 +1,93 @@
 import { useEffect, useRef } from 'react';
-// Dynamic import of Plotly to avoid bundler resolution issues
-type Config = any;
-type Data = any;
-type Layout = any;
+import Plotly from 'plotly.js-dist-min';
 
-type Props = {
+interface PlotlyChartProps {
   id: string;
   title?: string;
   description?: string;
-  height?: string | number; // e.g., '400px' or 400
-  data: Data[];
-  layout?: Partial<Layout>;
-  config?: Partial<Config>;
+  height?: string;
+  data?: any;
+  layout?: any;
+  config?: any;
   className?: string;
-};
+}
 
 export function PlotlyChart({
   id,
   title,
   description,
-  height = '400px',
+  height = "400px",
   data,
   layout,
   config,
-  className,
-}: Props) {
-  const chartRef = useRef<HTMLDivElement | null>(null);
+  className = ""
+}: PlotlyChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!chartRef.current) return;
-    const target = chartRef.current;
 
-    (async () => {
-      // Try dist-min first; fallback to dist
-      let Plotly: any;
-      try {
-        Plotly = (await import('plotly.js-dist-min')).default;
-      } catch {
-        Plotly = (await import('plotly.js-dist')).default;
+    // Clear previous plot
+    chartRef.current.innerHTML = '';
+
+    if (data && data.length > 0) {
+      // Create the plot with actual data
+      Plotly.newPlot(chartRef.current, data, layout || {}, {
+        responsive: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+        ...config
+      }).then(() => {
+        // Ensure chart is properly sized after creation
+        Plotly.Plots.resize(chartRef.current);
+      });
+    } else {
+      // Show placeholder when no data
+      const isDark = document.documentElement.classList.contains('dark') ||
+                     window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const textColor = isDark ? 'text-gray-300' : 'text-gray-500';
+
+      chartRef.current.innerHTML = `
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center ${textColor}">
+            <div class="text-4xl mb-2">📊</div>
+            <div class="font-medium">Plotly Chart: ${title || 'Chart'}</div>
+            <div class="text-sm">Ready for data integration</div>
+          </div>
+        </div>
+      `;
+    }
+  }, [data, layout, config, title]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartRef.current && data && data.length > 0) {
+        Plotly.Plots.resize(chartRef.current);
       }
-      await Plotly.newPlot(
-        target,
-        data,
-        {
-          margin: { l: 40, r: 20, t: 20, b: 40 },
-          ...layout,
-        },
-        {
-          responsive: true,
-          displaylogo: false,
-          ...config,
-        }
-      );
-    })();
-
-    return () => {
-      (async () => {
-        try {
-          const P = (await import('plotly.js-dist-min')).default;
-          P.purge(target);
-        } catch {
-          try {
-            const P2 = (await import('plotly.js-dist')).default;
-            P2.purge(target);
-          } catch {
-            // ignore
-          }
-        }
-      })();
     };
-  }, [JSON.stringify(data), JSON.stringify(layout), JSON.stringify(config)]);
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [data]);
 
   return (
-    <div className={className}>
-      {(title || description) && (
-        <div className="mb-2">
-          {title && <h3 className="font-semibold">{title}</h3>}
+    <div className={`w-full ${className}`}>
+      {title && (
+        <div className="mb-4">
+          <h4 className="font-semibold text-gray-800">{title}</h4>
           {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm text-gray-600 mt-1">{description}</p>
           )}
         </div>
       )}
-      <div id={id} ref={chartRef} style={{ width: '100%', height }} />
+
+      <div
+        ref={chartRef}
+        id={id}
+        className="plotly-chart-container w-full bg-gray-50 rounded-lg border border-gray-200"
+        style={{ height }}
+      />
     </div>
   );
 }
