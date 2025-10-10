@@ -168,10 +168,16 @@ viz/
 │   ├── App.tsx                               # Main app with 7-page tabs
 │   ├── components/
 │   │   ├── charts/
-│   │   │   ├── PlotlyChart.tsx              # Reusable Plotly wrapper
+│   │   │   ├── PlotlyChart.tsx              # Reusable Plotly wrapper (with dark mode)
 │   │   │   └── BasicChart.tsx               # Fallback chart component
-│   │   ├── WaterAvailabilityPageWorking.tsx # Page 2 (with backend integration)
-│   │   ├── DemographyPageWorking.tsx        # Page 3 (with backend integration)
+│   │   ├── pages/
+│   │   │   ├── EcologicalWaterPageSlider.tsx # ✅ Page 4 (fully integrated)
+│   │   │   ├── StudyAreaPage.tsx            # Page 1 (static design)
+│   │   │   ├── WaterAvailabilityPage.tsx    # Page 2 (static design)
+│   │   │   ├── DemographicsPage.tsx         # Page 3 (static design)
+│   │   │   ├── AgriculturePage.tsx          # Page 5 (static design)
+│   │   │   ├── WaterStressPage.tsx          # Page 6 (static design)
+│   │   │   └── WaterQualityPage.tsx         # Page 7 (static design)
 │   │   └── ui/                              # shadcn/Radix UI components
 │   ├── services/
 │   │   └── api.ts                           # API client functions
@@ -179,6 +185,7 @@ viz/
 │   │   └── useApiData.ts                    # Data fetching hooks
 │   └── styles/
 │       └── globals.css                      # Global styles
+├── BACKEND_INTEGRATION_GUIDE.md            # 📚 Standard integration guide
 ├── package.json
 ├── vite.config.ts
 └── index.html
@@ -187,21 +194,56 @@ viz/
 ### Key Components
 
 #### PlotlyChart
-Reusable Plotly component accepting standard props:
+Reusable Plotly component with dark mode support:
 ```tsx
 <PlotlyChart
   id="unique-chart-id"
   title="Chart Title"
   height="400px"
   data={plotlyData}    // Plotly.Data[]
-  layout={plotlyLayout}  // Partial<Plotly.Layout>
+  layout={plotlyLayout}  // Partial<Plotly.Layout> (auto dark mode)
   config={{ responsive: true, displaylogo: false }}
 />
 ```
 
-#### Working Pages
-- `WaterAvailabilityPageWorking.tsx`: Fetches "YRB available surface water" and renders Plotly time series
-- `DemographyPageWorking.tsx`: Fetches "Total population" with "Reload" button for manual retries
+#### ✅ Fully Integrated Pages
+- **`EcologicalWaterPageSlider.tsx`**: Complete backend integration with slider controls
+  - Real-time parameter adjustment (ecological flow: 0.2, 0.25, 0.3)
+  - Multi-variable support (surface water, discharge, sediment)
+  - Dark mode adaptive charts
+  - Statistical analysis panel
+  - 2020-2100 time range focus
+
+#### 🎨 Static Design Pages (Ready for Integration)
+- `StudyAreaPage.tsx`: Geographic overview with map placeholder
+- `WaterAvailabilityPage.tsx`: Climate projections and water availability
+- `DemographicsPage.tsx`: Population and demographic trends
+- `AgriculturePage.tsx`: Agricultural water use and irrigation
+- `WaterStressPage.tsx`: Water stress indicators and vulnerability
+- `WaterQualityPage.tsx`: Water quality parameters and pollution
+
+---
+
+## 🎉 Success Story: Ecological Water Integration
+
+### What We Built
+A fully functional page demonstrating the complete backend-frontend integration:
+
+- **Real-time Parameter Control**: Slider adjusts ecological flow (0.2, 0.25, 0.3)
+- **Multi-Variable Analysis**: Switch between surface water, discharge, and sediment data
+- **Dark Mode Support**: Charts automatically adapt to theme changes
+- **Statistical Dashboard**: Mean, max, min values with corresponding years
+- **2020-2100 Focus**: Optimized for climate projection analysis
+
+### Technical Achievements
+- ✅ **API Integration**: Full backend connectivity with error handling
+- ✅ **State Management**: Real-time updates with React hooks
+- ✅ **Chart Rendering**: Plotly.js with responsive design
+- ✅ **Theme Adaptation**: Automatic dark/light mode switching
+- ✅ **Performance**: Optimized data loading and caching
+
+### Ready for Scale
+This pattern can be applied to all remaining pages using our standardized integration guide.
 
 ---
 
@@ -230,9 +272,9 @@ npm run dev
 ```
 
 ### 4. Explore
-- Navigate to **Page 2** (Water Availability) or **Page 3** (Demography)
-- Charts auto-load data from backend; fallback to demo data on error
-- Check browser Console for `[Demography]` logs and Network tab for API calls
+- Navigate to **Page 4** (Ecological Water) for full backend integration demo
+- Features: Slider controls, variable switching, dark mode, real-time updates
+- Check browser Console for API logs and Network tab for `/resolve_scenario` calls
 
 ---
 
@@ -330,9 +372,14 @@ Install: `cd viz && npm install`
 
 ### Frontend doesn't show data
 1. Check backend is running: visit `http://127.0.0.1:8000/variables`
-2. Check browser Console for `[Demography]` logs
+2. Check browser Console for API logs and error messages
 3. Check Network tab for `/params`, `/resolve_scenario`, `/series` requests
-4. Hard refresh: `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
+4. Verify parameter names match backend API exactly (case-sensitive)
+5. Hard refresh: `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
+
+### Dark mode issues
+- Charts automatically adapt to theme changes
+- If charts don't update: check `isDarkMode()` function and theme listeners
 
 ### Port conflicts
 - Backend: Change port in `makefile` or run `poetry run uvicorn scripts.api_server:app --port 8001`
@@ -399,16 +446,22 @@ See `docs/example_usage.ipynb` for complete examples.
 
 ## Next Steps
 
+### 🎯 Immediate Priority
+1. **Apply Integration Pattern**: Use `viz/BACKEND_INTEGRATION_GUIDE.md` to integrate remaining 5 pages
+2. **Standard Template**: Copy `EcologicalWaterPageSlider.tsx` as starting point for each page
+3. **Parameter Mapping**: Each page focuses on different parameter combinations
+
 ### For Backend
 - Add batch endpoints: `GET /series/batch` for multiple variables/scenarios
 - Implement downsampling (LTTB algorithm) for large time series
 - Add statistical bands (p10/p90) for scenario ensembles
 
 ### For Frontend
-- Connect parameter controls to `POST /resolve_scenario` and update charts dynamically
+- ✅ **Completed**: Ecological Water page with full backend integration
+- **Next**: Apply integration pattern to remaining 5 pages using `BACKEND_INTEGRATION_GUIDE.md`
+- **Standard Process**: Copy `EcologicalWaterPageSlider.tsx` → modify parameters → update variables
 - Add multi-variable comparison (overlay multiple series)
 - Implement export (PNG/CSV download)
-- Add remaining 5 pages (Ecological Water, Agriculture, Water Stress, etc.)
 
 ---
 
