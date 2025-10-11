@@ -21,34 +21,36 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
 
   useEffect(() => {
     const initializeMap = async () => {
-      console.log('🗺️ Initializing Leaflet map...');
-      console.log('Map ref:', mapRef.current);
-      console.log('Leaflet available:', !!window.L);
+      // Wait for document to be completely loaded
+      if (document.readyState !== 'complete') {
+        await new Promise(resolve => {
+          if (document.readyState === 'complete') {
+            resolve(void 0);
+          } else {
+            window.addEventListener('load', () => resolve(void 0), { once: true });
+          }
+        });
+      }
 
-      // Wait a bit for Leaflet to load if not immediately available
+      // Wait for Leaflet to load
       if (!window.L) {
-        console.log('⏳ Waiting for Leaflet library to load...');
         let attempts = 0;
-        while (!window.L && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        while (!window.L && attempts < 100) {
+          await new Promise(resolve => setTimeout(resolve, 50));
           attempts++;
         }
       }
 
       if (!mapRef.current || !window.L) {
-        console.error('❌ Leaflet library not loaded or map ref not available');
         setError('Leaflet library not loaded');
         setLoading(false);
         return;
       }
 
-      // Ensure container has dimensions before initializing map
+      // Ensure container has dimensions
       const container = mapRef.current;
       const rect = container.getBoundingClientRect();
-      console.log('📏 Container dimensions:', rect.width, 'x', rect.height);
-      
       if (rect.width === 0 || rect.height === 0) {
-        console.log('⏳ Container has no dimensions, waiting...');
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
@@ -60,10 +62,18 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         }).setView([35.0, 110.0], 6);
 
         mapInstanceRef.current = map;
-        
-        // Ensure map is fully initialized before proceeding
+
+        // Ensure map is fully initialized and force re-render
         map.whenReady(() => {
-          console.log('✅ Map is ready');
+          // Force map to re-render after a delay (fixes initial load issue)
+          setTimeout(() => {
+            map.invalidateSize();
+            map.eachLayer((layer: any) => {
+              if (layer.redraw) {
+                layer.redraw();
+              }
+            });
+          }, 500);
         });
 
         // Add multiple tile layers
@@ -111,23 +121,10 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         const testMarker = window.L.marker([35.0, 110.0])
           .bindPopup('Test marker - Map is working!')
           .addTo(overlayGroup);
-        console.log('📍 Test marker added:', testMarker);
-
-        // Add event listeners for debugging
-        map.on('layeradd', (e) => {
-          console.log('➕ Layer added:', e.layer);
-        });
-
-        map.on('layerremove', (e) => {
-          console.log('➖ Layer removed:', e.layer);
-        });
 
         // Load Yellow River Basin boundary
         try {
-          console.log('🌊 Loading Yellow River Basin data...');
-          console.log('📍 Trying paths in order: /yellow_river_basin.geojson, /static/yellow_river_basin.geojson, /yellow-river-basin');
           const basinData: YellowRiverBasinData = await getYellowRiverBasin();
-          console.log('✅ Basin data loaded:', basinData);
 
           // Create Yellow River Basin boundary layer
           const basinLayer = window.L.geoJSON(basinData, {
@@ -149,38 +146,17 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           // Add basin layer to overlay group to ensure it stays visible
           setTimeout(() => {
             basinLayer.addTo(map._overlayGroup);
-            console.log('🎨 Applied styles and added basin layer to overlay group');
           }, 100);
 
-          console.log('🗺️ Basin layer added to map:', basinLayer);
-          console.log('📐 Layer bounds:', basinLayer.getBounds());
-
-          // Fit map to basin bounds with delay to ensure layer is added
+          // Fit map to basin bounds
           setTimeout(() => {
             if (basinLayer.getBounds().isValid()) {
-              console.log('🎯 Fitting map to basin bounds...');
               const bounds = basinLayer.getBounds();
-              console.log('📍 Bounds:', bounds.toString());
-              map.fitBounds(bounds, { padding: [20, 20] });
-
-              // Debug: Log map center and zoom
-              setTimeout(() => {
-                try {
-                  console.log('🗺️ Map center:', map.getCenter());
-                  console.log('🔍 Map zoom:', map.getZoom());
-                  console.log('📏 Map bounds:', map.getBounds());
-                  console.log('🌊 Basin layer visible:', map.hasLayer(basinLayer));
-                } catch (debugError) {
-                  console.warn('⚠️ Debug info failed:', debugError);
-                }
-              }, 1000);
-            } else {
-              console.warn('⚠️ Basin layer bounds are invalid');
+              map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
             }
           }, 200);
         } catch (basinError) {
-          console.error('❌ Failed to load Yellow River Basin data:', basinError);
-          // Continue without basin data
+          console.error('Failed to load Yellow River Basin data:', basinError);
         }
 
         setLoading(false);
@@ -242,8 +218,11 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
       className={`map-container ${className}`}
       style={{
         height,
+        width: '100%',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        display: 'block',
+        overflow: 'hidden'
       }}
     />
   );
