@@ -9,7 +9,7 @@ import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPag
 import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
 import WaterStressPageWithGlobalParams from './components/pages/WaterStressPageWithGlobalParams';
 import AgriculturePage from './components/pages/AgriculturePage';
-import WaterQualityPage from './components/pages/WaterQualityPage';
+import RiverAnalysisPage from './components/pages/RiverAnalysisPage';
 
 // Import global state management
 import { ScenarioProvider, useScenario } from './contexts/ScenarioContext';
@@ -72,7 +72,7 @@ function AppInner() {
       case 3: return <EcologicalWaterPageSlider />;
       case 4: return <WaterDemandPageWithRealData />;
       case 5: return <WaterStressPageWithGlobalParams />;
-      case 6: return <WaterQualityPage />;
+      case 6: return <RiverAnalysisPage />;
       default: return <StudyAreaPage />;
     }
   };
