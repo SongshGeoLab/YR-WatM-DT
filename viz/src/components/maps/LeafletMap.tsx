@@ -110,6 +110,7 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         // Load Yellow River Basin boundary
         try {
           console.log('🌊 Loading Yellow River Basin data...');
+          console.log('📍 Trying paths in order: /yellow_river_basin.geojson, /static/yellow_river_basin.geojson, /yellow-river-basin');
           const basinData: YellowRiverBasinData = await getYellowRiverBasin();
           console.log('✅ Basin data loaded:', basinData);
 
