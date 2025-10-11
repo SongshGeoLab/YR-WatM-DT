@@ -143,7 +143,9 @@ const WaterStressChartWithCI: React.FC<WaterStressChartWithCIProps> = ({
           title: "Year",
           color: darkMode ? '#ffffff' : '#000000',
           gridcolor: darkMode ? '#333333' : '#e5e5e5',
-          linecolor: darkMode ? '#666666' : '#cccccc'
+          linecolor: darkMode ? '#666666' : '#cccccc',
+          range: [2020, 2100],
+          dtick: 20
         },
         yaxis: {
           title: "Water Stress Index (WSI)",
@@ -210,10 +212,7 @@ const WaterStressPageWithGlobalParams: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Fetch WSI data using global scenario context
-  const { data: wsiData, loading: dataLoading, error: dataError } = useScenarioSeries('yrb_wsi', {
-    start_step: 0,
-    end_step: 80 // 2020-2100
-  });
+  const { data: wsiData, loading: dataLoading, error: dataError } = useScenarioSeries('yrb_wsi');
 
   useEffect(() => {
     setLoading(dataLoading);
@@ -225,6 +224,16 @@ const WaterStressPageWithGlobalParams: React.FC = () => {
 
     const { time, value, mean } = wsiData.series;
     const values = scenarioResult?.isSingleScenario ? value : mean;
+
+    // Debug: Log data information
+    console.log('🔍 WSI Data Debug:', {
+      timeLength: time?.length,
+      valueLength: value?.length,
+      meanLength: mean?.length,
+      timeRange: time ? [time[0], time[time.length - 1]] : null,
+      valueRange: values ? [Math.min(...values), Math.max(...values)] : null,
+      isSingleScenario: scenarioResult?.isSingleScenario
+    });
 
     if (!values || values.length === 0) return null;
 

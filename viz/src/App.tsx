@@ -4,7 +4,7 @@ import { Moon, Sun, FileText, Github, Map, Waves, Users, TreePine, Sprout, Gauge
 // Import all page components
 import StudyAreaPage from './components/pages/StudyAreaPage';
 import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
-import DemographicsPage from './components/pages/DemographicsPage';
+import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
 import WaterDemandPageWithExportedData from './components/pages/WaterDemandPageWithExportedData';
 import WaterStressPageWithGlobalParams from './components/pages/WaterStressPageWithGlobalParams';
@@ -68,7 +68,7 @@ function AppInner() {
     switch (activeTab) {
       case 0: return <StudyAreaPage />;
       case 1: return <WaterAvailabilityPage />;
-      case 2: return <DemographicsPage />;
+      case 2: return <DemographicsPageOptimized />;
       case 3: return <EcologicalWaterPageSlider />;
       case 4: return <WaterDemandPageWithExportedData />;
       case 5: return <WaterStressPageWithGlobalParams />;
@@ -93,7 +93,7 @@ function AppInner() {
               <p className="text-xs text-muted-foreground">Interactive Data Visualization & Scenario Analysis Platform</p>
             </div>
           </div>
-                 <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
                    {scenarioResult && (
                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                        scenarioResult.isSingleScenario
@@ -111,10 +111,10 @@ function AppInner() {
                        Loading...
                      </span>
                    )}
-                   <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
-                     2020-2100 Projection
-                   </span>
-                 </div>
+            <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
+              2020-2100 Projection
+            </span>
+          </div>
         </div>
       </div>
 
