@@ -1,184 +1,120 @@
+import { useState } from 'react';
+import { PlotlyChart } from '../charts/PlotlyChart';
+import { CloudRain } from 'lucide-react';
+
+/**
+ * Water Availability Page Component
+ *
+ * Displays climate change scenarios (RCP pathways) and their impact
+ * on surface water availability in the Yellow River Basin.
+ */
 export default function WaterAvailabilityPage() {
-  // Mock data for climate scenarios
-  const scenarios = ['RCP2.6', 'RCP4.5', 'RCP8.5'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const [selectedScenario, setSelectedScenario] = useState('RCP2.6');
 
-  const waterAvailabilityData = {
-    'RCP2.6': [120, 115, 130, 145, 180, 220, 280, 290, 240, 190, 150, 125],
-    'RCP4.5': [115, 110, 125, 140, 170, 210, 270, 285, 235, 185, 145, 120],
-    'RCP8.5': [110, 105, 115, 130, 155, 190, 250, 270, 220, 170, 135, 115]
+  const scenarios = {
+    'RCP2.6': {
+      name: 'RCP2.6',
+      title: 'Radical Sustainable Transformation',
+      color: '#10b981',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      textColor: 'text-green-900',
+      description: 'Green technology revolution with radical ecological restoration and advanced water recycling technologies'
+    },
+    'RCP4.5': {
+      name: 'RCP4.5',
+      title: 'Balancing Economy and Sustainability',
+      color: '#f59e0b',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-200',
+      textColor: 'text-amber-900',
+      description: 'Traditional industries coexist with green technologies, gradual renewable energy adoption'
+    },
+    'RCP8.5': {
+      name: 'RCP8.5',
+      title: 'Focusing on Economic Development',
+      color: '#ef4444',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-900',
+      description: 'High fossil fuel dependence with rapid economic growth but inefficient water resource use'
+    }
   };
-
-  const colors = {
-    'RCP2.6': '#10b981', // green
-    'RCP4.5': '#f59e0b', // amber
-    'RCP8.5': '#ef4444'  // red
-  };
-
-  const maxValue = Math.max(...Object.values(waterAvailabilityData).flat());
 
   return (
-    <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 h-full">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-white">
-          2
+    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
+      <div className="flex items-center gap-6 mb-6">
+        <div className="w-16 h-16 rounded-full bg-cyan-500 flex items-center justify-center text-white shadow-lg">
+          <CloudRain className="w-8 h-8" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900">Surface Water Availability</h2>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold text-foreground">Climate Change Scenarios</h1>
+            <span className="px-3 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full text-sm font-medium">
+              Page 2
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">RCP Pathways & Surface Water Availability Projections</p>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Climate Scenario Indicator */}
-        <div className="flex items-center gap-4 mb-4">
-          <span className="text-lg font-medium text-gray-700">What is the RCP climate scenario?</span>
+      {/* Scenario Selection */}
+      <div className="mb-4 flex items-center justify-between bg-muted/50 rounded-lg p-3">
+        <div className="flex items-center gap-4">
+          <h3 className="font-semibold text-foreground">Climate Scenario:</h3>
           <div className="flex gap-2">
-            <div className="w-4 h-4 rounded-full border-2 border-red-400"></div>
-            <div className="w-4 h-4 rounded-full bg-amber-400"></div>
-            <div className="w-4 h-4 rounded-full border-2 border-green-400"></div>
-          </div>
-        </div>
-
-        {/* Main Chart */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Monthly Water Availability by Climate Scenario</h3>
-
-          {/* Chart Area */}
-          <div className="bg-white rounded-lg p-6 mb-4">
-            <div className="h-80 relative">
-              {/* Y-axis labels */}
-              <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 pr-3">
-                <span>{maxValue}</span>
-                <span>{Math.round(maxValue * 0.75)}</span>
-                <span>{Math.round(maxValue * 0.5)}</span>
-                <span>{Math.round(maxValue * 0.25)}</span>
-                <span>0</span>
-              </div>
-
-              {/* Chart content */}
-              <div className="ml-8 h-full relative">
-                {/* Grid lines */}
-                {[0, 0.25, 0.5, 0.75, 1].map((fraction, index) => (
-                  <div
-                    key={index}
-                    className="absolute w-full border-t border-gray-200"
-                    style={{ bottom: `${fraction * 100}%` }}
-                  />
-                ))}
-
-                {/* Data lines */}
-                <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 10 }}>
-                  {scenarios.map((scenario, scenarioIndex) => {
-                    const points = waterAvailabilityData[scenario].map((value, monthIndex) => ({
-                      x: (monthIndex / (months.length - 1)) * 100,
-                      y: 100 - (value / maxValue) * 100
-                    }));
-
-                    const pathData = points.reduce((acc, point, index) => {
-                      const command = index === 0 ? 'M' : 'L';
-                      return `${acc} ${command} ${point.x}% ${point.y}%`;
-                    }, '');
-
-                    return (
-                      <g key={scenario}>
-                        <path
-                          d={pathData}
-                          fill="none"
-                          stroke={colors[scenario]}
-                          strokeWidth="3"
-                          className="drop-shadow-sm"
-                        />
-                        {/* Data points */}
-                        {points.map((point, index) => (
-                          <circle
-                            key={index}
-                            cx={`${point.x}%`}
-                            cy={`${point.y}%`}
-                            r="4"
-                            fill={colors[scenario]}
-                            className="drop-shadow-sm"
-                          />
-                        ))}
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                {/* X-axis labels */}
-                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 mt-2">
-                  {months.map((month, index) => (
-                    <span key={month} className="transform -translate-x-1/2" style={{ marginLeft: index === 0 ? '0' : '0' }}>
-                      {month}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-4">
-            {scenarios.map(scenario => (
-              <div key={scenario} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-1 rounded"
-                  style={{ backgroundColor: colors[scenario] }}
-                />
-                <span className="text-sm font-medium text-gray-700">{scenario}</span>
-              </div>
+            {Object.entries(scenarios).map(([key, scenario]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedScenario(key)}
+                className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                  selectedScenario === key
+                    ? `${scenario.bgColor} ${scenario.borderColor} ${scenario.textColor} font-medium shadow-sm`
+                    : 'bg-card border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                {scenario.name}
+              </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Climate Scenarios Explanation */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <h4 className="font-semibold text-green-900">RCP2.6</h4>
-            </div>
-            <div className="text-sm text-green-800 space-y-1">
-              <div>• Strong mitigation scenario</div>
-              <div>• Global warming limited to 1.5°C</div>
-              <div>• Higher water availability</div>
-              <div>• Best-case climate outcome</div>
-            </div>
+      {/* Charts Grid */}
+      <div className="grid grid-cols-2 gap-4 h-[calc(100%-12rem)]">
+        <div className="flex flex-col gap-4 min-h-0">
+          <div className="flex-1 min-h-0">
+            <PlotlyChart
+              id="rcp-climate-scenarios"
+              title="RCP Climate Scenario Pathways"
+              height="100%"
+            />
           </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-              <h4 className="font-semibold text-amber-900">RCP4.5</h4>
-            </div>
-            <div className="text-sm text-amber-800 space-y-1">
-              <div>• Moderate mitigation scenario</div>
-              <div>• Global warming ~2.4°C by 2100</div>
-              <div>• Moderate water stress</div>
-              <div>• Intermediate climate outcome</div>
-            </div>
-          </div>
-
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <h4 className="font-semibold text-red-900">RCP8.5</h4>
-            </div>
-            <div className="text-sm text-red-800 space-y-1">
-              <div>• High emission scenario</div>
-              <div>• Global warming ~4.9°C by 2100</div>
-              <div>• Severe water stress</div>
-              <div>• Business-as-usual outcome</div>
-            </div>
+          <div className="flex-1 min-h-0">
+            <PlotlyChart
+              id="temperature-precipitation-trends"
+              title="Temperature & Precipitation Trends"
+              height="100%"
+            />
           </div>
         </div>
 
-        {/* Additional Information */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-3">Climate Scenarios Caption</h4>
-          <p className="text-sm text-blue-800">
-            Representative Concentration Pathways (RCPs) represent different greenhouse gas concentration trajectories.
-            The analysis shows projected surface water availability (km³/month) under three climate scenarios for the
-            Yangtze River Basin through 2100. Higher emission scenarios generally result in reduced water availability
-            during critical months, with the most significant impacts during the traditional dry season (Oct-Mar).
-          </p>
+        <div className="flex flex-col gap-4 min-h-0">
+          <div className="flex-1 min-h-0 max-h-[50%]">
+            <PlotlyChart
+              id="surface-water-availability"
+              title="Surface Water Availability Projections"
+              height="100%"
+            />
+          </div>
+          <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto">
+            <h4 className="font-semibold text-foreground mb-3">
+              {scenarios[selectedScenario].name}: Understanding the Scenario
+            </h4>
+            <div className="space-y-3 text-base text-foreground leading-relaxed">
+              <p>{scenarios[selectedScenario].description}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,129 +1,152 @@
-import StudyAreaMap from '../StudyAreaMap';
+import { useState } from 'react';
+import { LeafletMap } from '../maps/LeafletMap';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { Map, Leaf, Scale, Factory } from 'lucide-react';
 
+/**
+ * Study Area Page Component
+ *
+ * Displays Yellow River Basin overview with global scenario selection
+ * and interactive map.
+ */
 export default function StudyAreaPage() {
+  const [selectedScenario, setSelectedScenario] = useState('tSSP1-RCP2.6');
+
+  const scenarios = {
+    'tSSP1-RCP2.6': {
+      name: 'Radical sustainable transformation',
+      code: 'tSSP1-RCP2.6',
+      color: 'bg-green-500',
+      icon: Leaf,
+      description: 'Green technology revolution, social equity, and integrated governance with radical ecological restoration'
+    },
+    'tSSP2-RCP4.5': {
+      name: 'Balancing economy and sustainability',
+      code: 'tSSP2-RCP4.5',
+      color: 'bg-amber-500',
+      icon: Scale,
+      description: 'Seeking balance between economic growth and ecosystem protection with moderate policy implementation'
+    },
+    'tSSP5-RCP8.5': {
+      name: 'Focusing on economic development',
+      code: 'tSSP5-RCP8.5',
+      color: 'bg-red-500',
+      icon: Factory,
+      description: 'Economy-driven development prioritizing growth over sustainability with high fossil fuel dependence'
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 h-full">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white">
-          1
+    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
+      <div className="flex items-center gap-6 mb-6">
+        <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg">
+          <Map className="w-8 h-8" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900">Description of the Study Area</h2>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold text-foreground">Introduction</h1>
+            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+              Page 1
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">Yellow River Basin Overview & Scenario Selection</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100%-5rem)]">
-        {/* Left side - Text description */}
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-800">Yangtze River Basin Overview</h3>
-            <div className="space-y-3 text-gray-700 leading-relaxed">
+      {/* Global Scenario Selection */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">Global Scenario Selection</h2>
+        <p className="text-lg text-muted-foreground mb-6">
+          Select a preset of parameters from three overall scenarios:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Object.entries(scenarios).map(([key, scenario]) => {
+            const Icon = scenario.icon;
+            return (
+              <Tooltip key={key}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setSelectedScenario(key)}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedScenario === key
+                        ? `${scenario.color} border-transparent text-white`
+                        : 'bg-card border-border hover:border-muted-foreground text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        selectedScenario === key
+                          ? 'bg-white/20 text-white'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="font-medium">{scenario.name}</div>
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-md">
+                  <div className="space-y-2">
+                    <div className="font-medium text-base">{scenario.name}</div>
+                    <div className="text-sm opacity-90">{scenario.description}</div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main content - Map and Description */}
+      <div className="flex gap-8 max-h-[calc(100%-16rem)] overflow-hidden">
+        {/* Left side - Description */}
+        <div className="flex-1 flex flex-col space-y-4 min-h-0">
+          <div className="space-y-3 flex-shrink-0">
+            <h3 className="font-semibold text-foreground text-lg">Yellow River Basin Overview</h3>
+            <div className="space-y-3 text-foreground leading-relaxed text-base">
               <p>
-                The Yangtze River Basin is the largest river system in China and the third-longest river in the world.
-                Covering approximately 1.8 million km², it drains about one-fifth of China's total land area.
+                The Yellow River is the fifth-longest river globally, spans arid to semi-arid regions and is among
+                those river basins most dramatically affected by human activity over the last century.
               </p>
               <p>
-                The basin supports over 400 million people and is crucial for China's economic development,
-                providing water resources for agriculture, industry, and domestic use across multiple provinces.
-              </p>
-              <p>
-                Key characteristics include diverse topography ranging from the Tibetan Plateau in the west
-                to the East China Sea delta, with significant elevation changes affecting local climate and hydrology.
+                Since the 1960s, engineering projects such as reservoir construction have fundamentally altered
+                water flow and sediment transport. The basin experiences significant water use growth, mainly for
+                irrigation, substantially reducing the river's discharge.
               </p>
             </div>
           </div>
 
-          {/* Key Statistics */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">Key Basin Statistics</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Length:</span>
-                  <span className="font-medium">6,300 km</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Drainage Area:</span>
-                  <span className="font-medium">1.8M km²</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Average Discharge:</span>
-                  <span className="font-medium">31,900 m³/s</span>
-                </div>
+          {/* Key Basin Features */}
+          <div className="flex-1 bg-muted rounded-lg p-4 min-h-0 overflow-hidden">
+            <h4 className="font-semibold text-foreground mb-3 text-base">Key Basin Features</h4>
+            <div className="grid grid-cols-1 gap-2 text-base">
+              <div className="flex items-start gap-2">
+                <span className="text-blue-600 font-medium">Source Region:</span>
+                <span className="text-foreground">Qinghai-Tibet Plateau (35-42% streamflow)</span>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Population:</span>
-                  <span className="font-medium">~400M</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Major Dams:</span>
-                  <span className="font-medium">50,000+</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">GDP Contribution:</span>
-                  <span className="font-medium">~42%</span>
-                </div>
+              <div className="flex items-start gap-2">
+                <span className="text-green-600 font-medium">Upper Reach:</span>
+                <span className="text-foreground">Cascading reservoirs, hydroenergy</span>
               </div>
-            </div>
-          </div>
-
-          {/* Climate Information */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-3">Climate Characteristics</h4>
-            <div className="text-sm text-blue-800 space-y-2">
-              <div>• <strong>Monsoon Climate:</strong> Distinct wet and dry seasons</div>
-              <div>• <strong>Annual Precipitation:</strong> 400-1,600 mm (varies by region)</div>
-              <div>• <strong>Temperature Range:</strong> -10°C to 35°C (seasonal variation)</div>
-              <div>• <strong>Flood Season:</strong> June to September</div>
-            </div>
-          </div>
-
-          {/* Study Focus Areas */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">Research Focus Areas</h4>
-            <div className="grid grid-cols-1 gap-2 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>Water resource availability and climate impacts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>Population dynamics and water demand</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span>Agricultural and industrial water use</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span>Ecological water requirements</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>Water stress and quality assessment</span>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-600 font-medium">Loess Plateau:</span>
+                <span className="text-foreground">Soil erosion, restoration projects</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right side - Interactive Map */}
-        <div className="flex flex-col">
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Interactive Basin Map</h3>
-            <p className="text-sm text-gray-600">
-              Explore the Yangtze River Basin with monitoring stations, major cities, and watershed boundaries.
-            </p>
+        {/* Right side - Map */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="mb-3 flex-shrink-0">
+            <h3 className="font-semibold text-foreground mb-2 text-lg">Interactive Basin Map</h3>
           </div>
-
-          <div className="flex-1 min-h-[400px]">
-            <StudyAreaMap />
-          </div>
-
-          {/* Map caption */}
-          <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded p-3">
-            <p>
-              <strong>Interactive Map Features:</strong> Basin boundary (blue line), monitoring stations (markers),
-              major urban centers (colored circles). Click on markers for detailed information about each location.
-            </p>
+          <div className="flex-1 min-h-0 bg-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
+            <LeafletMap
+              id="yellow-river-basin-map"
+              height="100%"
+              className="w-full h-full rounded-lg"
+            />
           </div>
         </div>
       </div>
