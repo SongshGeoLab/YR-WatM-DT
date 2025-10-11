@@ -729,6 +729,8 @@ function DemographicsPage() {
 
 // Import the working ecological water page
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
+// Import the water demand analysis page
+import WaterDemandPageWithExportedData from './components/pages/WaterDemandPageWithExportedData';
 
 function EcologicalWaterPage() {
   const [ecoFlowValue, setEcoFlowValue] = useState(0.25);
@@ -1140,7 +1142,7 @@ export default function App() {
       case 3:
         return <EcologicalWaterPageSlider />; // ✅ Fully integrated with backend (USER'S ORIGINAL DESIGN)
       case 4:
-        return <AgriculturePage />;
+        return <WaterDemandPageWithExportedData />;
       case 5:
         return <WaterStressPage />;
       case 6:

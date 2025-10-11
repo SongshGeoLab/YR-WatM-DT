@@ -248,3 +248,170 @@ def get_series(
             "value": df.get_column("value").to_list(),
         },
     }
+
+
+@app.get("/page5-data")
+def get_page5_data(
+    water_saving_ratio: float = Query(0.9),
+    energy_generation: float = Query(0.25)
+) -> Dict[str, object]:
+    """Get water demand analysis data for Page 5 frontend.
+    
+    This endpoint provides pre-computed water demand composition and time series data
+    based on water-saving irrigation efficiency ratio and fire generation share parameters.
+    """
+    try:
+        # Import the Page5 analysis functions
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        
+        from scripts.query_scenarios import ScenarioQuery
+        
+        # Initialize query engine
+        query = ScenarioQuery(DATA_PARQUET)
+        
+        # Define water demand categories
+        water_categories = [
+            "irrigation water demand province sum",
+            "production water demand province sum", 
+            "OA water demand province sum",
+            "domestic water demand province sum"
+        ]
+        
+        # Category display names and colors
+        category_names = {
+            "irrigation water demand province sum": "Irrigation",
+            "production water demand province sum": "Production", 
+            "OA water demand province sum": "Other Activities",
+            "domestic water demand province sum": "Domestic"
+        }
+        
+        category_colors = {
+            "Irrigation": "#1f77b4",
+            "Production": "#ff7f0e",
+            "Other Activities": "#2ca02c",
+            "Domestic": "#d62728"
+        }
+        
+        # Build filters
+        filters = {
+            "water-saving irrigation efficiency ratio": water_saving_ratio,
+            "fire generation share province target": energy_generation,
+            "Fertility Variation": 1.7,
+            "Ecological water flow variable": 0.25,
+            "Climate change scenario switch for water yield": 1,
+            "Diet change scenario switch": 1
+        }
+        
+        # Get water demand data
+        water_demand_data = query.get_series(
+            variables=water_categories,
+            filters=filters,
+            include_params=True
+        )
+        
+        # Calculate composition data
+        composition_data = (
+            water_demand_data
+            .group_by("variable")
+            .agg(pl.col("value").sum().alias("total_demand"))
+            .with_columns(
+                pl.col("variable").cast(pl.Utf8).replace(category_names).alias("category")
+            )
+            .with_columns(
+                (pl.col("total_demand") / pl.col("total_demand").sum() * 100).alias("percentage")
+            )
+            .sort("total_demand", descending=True)
+        )
+        
+        # Calculate total water demand time series
+        total_demand_ts = (
+            water_demand_data
+            .group_by(["scenario_name", "step", "time"])
+            .agg(pl.col("value").sum().alias("total_demand"))
+            .sort(["scenario_name", "step"])
+        )
+        
+        # Calculate time series statistics
+        ts_stats = (
+            total_demand_ts
+            .group_by(["step", "time"])
+            .agg([
+                pl.col("total_demand").mean().alias("mean"),
+                pl.col("total_demand").std().alias("std"),
+                pl.col("total_demand").min().alias("min"),
+                pl.col("total_demand").max().alias("max"),
+                pl.col("total_demand").quantile(0.05).alias("p05"),
+                pl.col("total_demand").quantile(0.95).alias("p95"),
+                pl.col("total_demand").count().alias("n_scenarios")
+            ])
+            .with_columns([
+                (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
+                (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper")
+            ])
+            .sort("step")
+        )
+        
+        # Filter to 2020-2100 for frontend
+        ts_stats_filtered = ts_stats.filter(
+            (pl.col("time") >= 2020) & (pl.col("time") <= 2100)
+        )
+        
+        # Calculate key statistics
+        stats = {}
+        if ts_stats_filtered.height > 0:
+            stats['overall_mean'] = float(ts_stats_filtered['mean'].mean())
+            stats['overall_std'] = float(ts_stats_filtered['mean'].std())
+            
+            max_idx = ts_stats_filtered['mean'].arg_max()
+            stats['max_value'] = float(ts_stats_filtered['mean'][max_idx])
+            stats['max_year'] = float(ts_stats_filtered['time'][max_idx])
+            
+            min_idx = ts_stats_filtered['mean'].arg_min()
+            stats['min_value'] = float(ts_stats_filtered['mean'][min_idx])
+            stats['min_year'] = float(ts_stats_filtered['time'][min_idx])
+            
+            # Trend analysis
+            if ts_stats_filtered.height > 1:
+                initial_value = ts_stats_filtered['mean'][0]
+                final_value = ts_stats_filtered['mean'][-1]
+                time_span = ts_stats_filtered['time'][-1] - ts_stats_filtered['time'][0]
+                stats['total_change'] = float(final_value - initial_value)
+                stats['total_change_pct'] = float((final_value - initial_value) / initial_value * 100)
+                stats['annual_growth_rate'] = float((final_value / initial_value) ** (1 / time_span) - 1)
+            
+            stats['coefficient_of_variation'] = float((stats['overall_std'] / stats['overall_mean']) * 100)
+            stats['value_range'] = float(stats['max_value'] - stats['min_value'])
+        
+        # Return structured data
+        return {
+            "parameters": {
+                "water_saving_ratio": water_saving_ratio,
+                "energy_generation": energy_generation,
+                "other_constraints": {
+                    "Fertility Variation": 1.7,
+                    "Ecological water flow variable": 0.25,
+                    "Climate change scenario switch for water yield": 1,
+                    "Diet change scenario switch": 1
+                }
+            },
+            "composition": {
+                "categories": composition_data["category"].to_list(),
+                "values": composition_data["total_demand"].to_list(),
+                "percentages": composition_data["percentage"].to_list()
+            },
+            "time_series": {
+                "time": ts_stats_filtered["time"].to_list(),
+                "mean": ts_stats_filtered["mean"].to_list(),
+                "ci_lower": ts_stats_filtered["ci_lower"].to_list(),
+                "ci_upper": ts_stats_filtered["ci_upper"].to_list(),
+                "min": ts_stats_filtered["min"].to_list(),
+                "max": ts_stats_filtered["max"].to_list(),
+                "n_scenarios": int(ts_stats_filtered["n_scenarios"][0]) if ts_stats_filtered.height > 0 else 0
+            },
+            "statistics": stats
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating Page5 data: {str(e)}")
