@@ -6,7 +6,7 @@ import StudyAreaPage from './components/pages/StudyAreaPage';
 import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
 import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
-import WaterDemandPageWithExportedData from './components/pages/WaterDemandPageWithExportedData';
+import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
 import WaterStressPageWithGlobalParams from './components/pages/WaterStressPageWithGlobalParams';
 import AgriculturePage from './components/pages/AgriculturePage';
 import WaterQualityPage from './components/pages/WaterQualityPage';
@@ -70,7 +70,7 @@ function AppInner() {
       case 1: return <WaterAvailabilityPage />;
       case 2: return <DemographicsPageOptimized />;
       case 3: return <EcologicalWaterPageSlider />;
-      case 4: return <WaterDemandPageWithExportedData />;
+      case 4: return <WaterDemandPageWithRealData />;
       case 5: return <WaterStressPageWithGlobalParams />;
       case 6: return <WaterQualityPage />;
       default: return <StudyAreaPage />;
