@@ -26,7 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Iterable, List, Tuple, Dict
+from typing import Dict, Iterable, List, Tuple
 
 import polars as pl
 

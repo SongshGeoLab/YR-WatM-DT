@@ -123,7 +123,7 @@
 2. 观察水资源可用量的变化趋势
 3. 比较不同情景下的差异
 
-**解读提示**: 
+**解读提示**:
 - 较高的排放情景（RCP8.5）通常会导致更大的水资源波动
 - 关注峰值和谷值出现的年份
 
@@ -158,7 +158,7 @@
 
 ---
 
-### 4. Ecological Water (生态用水) ⭐ 
+### 4. Ecological Water (生态用水) ⭐
 
 **功能**: 分析生态水流量占比对流域生态环境的影响。
 
@@ -438,7 +438,7 @@ water consumption of province in YRB sum      → water_consumption_of_province_
 
 ### Q4: 数据的时间范围是什么？
 
-**答案**: 
+**答案**:
 - 完整数据: 1981-2885年 (共1905个时间步)
 - 展示重点: 2020-2100年 (未来预测)
 
@@ -452,7 +452,7 @@ water consumption of province in YRB sum      → water_consumption_of_province_
 
 ### Q6: 能否导出数据或图表？
 
-**答案**: 
+**答案**:
 - **图表**: 鼠标悬停在图表上，点击右上角的相机图标可导出PNG
 - **数据**: 目前可以通过API接口获取原始数据（需要技术支持）
 
@@ -561,8 +561,8 @@ water consumption of province in YRB sum      → water_consumption_of_province_
 
 ## 📞 联系我们
 
-**项目维护**: SongshGeo  
-**邮箱**: songshgeo@gmail.com  
+**项目维护**: SongshGeo
+**邮箱**: songshgeo@gmail.com
 **GitHub**: [项目仓库链接]
 
 **反馈渠道**:
@@ -592,4 +592,3 @@ water consumption of province in YRB sum      → water_consumption_of_province_
 **祝您使用愉快！** 🎉
 
 如有任何问题，请随时联系我们。
-

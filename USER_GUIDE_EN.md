@@ -123,7 +123,7 @@ Contains navigation buttons for 7 thematic pages:
 2. Observe changes in water resource availability trends
 3. Compare differences under various scenarios
 
-**Interpretation Tips**: 
+**Interpretation Tips**:
 - Higher emission scenarios (RCP8.5) typically lead to greater water resource fluctuations
 - Focus on years when peaks and valleys occur
 
@@ -158,7 +158,7 @@ Contains navigation buttons for 7 thematic pages:
 
 ---
 
-### 4. Ecological Water ⭐ 
+### 4. Ecological Water ⭐
 
 **Function**: Analyzes the impact of ecological water flow proportion on basin ecological environment.
 
@@ -438,7 +438,7 @@ Toggle method: Click 🌙/☀️ button in lower left corner
 
 ### Q4: What is the time range of the data?
 
-**Answer**: 
+**Answer**:
 - Complete data: 1981-2885 (1905 time steps total)
 - Display focus: 2020-2100 (future predictions)
 
@@ -452,7 +452,7 @@ Toggle method: Click 🌙/☀️ button in lower left corner
 
 ### Q6: Can data or charts be exported?
 
-**Answer**: 
+**Answer**:
 - **Charts**: Hover over chart, click camera icon in upper right to export PNG
 - **Data**: Currently available via API interface (requires technical support)
 
@@ -561,8 +561,8 @@ If you use this system in your research, please cite:
 
 ## 📞 Contact Us
 
-**Project Maintainer**: SongshGeo  
-**Email**: songshgeo@gmail.com  
+**Project Maintainer**: SongshGeo
+**Email**: songshgeo@gmail.com
 **GitHub**: [Project Repository Link]
 
 **Feedback Channels**:
@@ -592,4 +592,3 @@ If you use this system in your research, please cite:
 **Enjoy using the platform!** 🎉
 
 If you have any questions, please feel free to contact us.
-

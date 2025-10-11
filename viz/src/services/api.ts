@@ -124,3 +124,27 @@ export async function healthCheck(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Climate data interfaces
+ */
+export interface ClimateScenarioData {
+  years: number[];
+  values: number[];
+}
+
+export interface ClimateData {
+  precipitation: Record<string, ClimateScenarioData>;
+  temperature: Record<string, ClimateScenarioData>;
+}
+
+/**
+ * Fetch climate scenario data for RCP pathways.
+ */
+export async function getClimateData(): Promise<ClimateData> {
+  const response = await fetch(`${API_BASE_URL}/climate-data`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch climate data: ${response.statusText}`);
+  }
+  return response.json();
+}

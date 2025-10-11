@@ -19,8 +19,7 @@ from typing import List
 
 import plotly.graph_objects as go
 import polars as pl
-from dash import Dash, Input, Output, dcc, html
-from dash import ALL
+from dash import ALL, Dash, Input, Output, dcc, html
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,14 +81,12 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
     """
     time_df = pl.read_parquet(data_parquet / "time.parquet")
     scenarios_df = pl.read_parquet(data_parquet / "scenarios.parquet")
-    scenario_names = (
-        scenarios_df.get_column("scenario_name").cast(pl.Utf8).unique().sort().to_list()
-    )
-
     # Parameter columns (all columns except scenario_name)
     param_cols = [c for c in scenarios_df.columns if c != "scenario_name"]
     # Unique sorted values per parameter
-    param_values = {p: scenarios_df.get_column(p).unique().sort().to_list() for p in param_cols}
+    param_values = {
+        p: scenarios_df.get_column(p).unique().sort().to_list() for p in param_cols
+    }
     # Baseline defaults from first row
     baseline = scenarios_df.head(1).to_dicts()[0]
 
@@ -123,7 +120,12 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
                     html.Div(
                         [
                             html.Label("Scenario (auto from parameters)"),
-                            dcc.Input(id="scenario", type="text", readOnly=True, style={"width": "100%"}),
+                            dcc.Input(
+                                id="scenario",
+                                type="text",
+                                readOnly=True,
+                                style={"width": "100%"},
+                            ),
                         ],
                         style={
                             "width": "32%",
@@ -135,7 +137,9 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
                 ],
                 style={"marginBottom": "12px"},
             ),
-            html.Details([html.Summary("Parameters (select values to locate scenario)")]),
+            html.Details(
+                [html.Summary("Parameters (select values to locate scenario)")]
+            ),
             html.Div(
                 [
                     html.Div(
@@ -143,7 +147,10 @@ def build_app(data_parquet: Path, data_dir: Path) -> Dash:
                             html.Label(p),
                             dcc.Dropdown(
                                 id={"type": "param", "name": p},
-                                options=[{"label": str(v), "value": v} for v in param_values[p]],
+                                options=[
+                                    {"label": str(v), "value": v}
+                                    for v in param_values[p]
+                                ],
                                 value=baseline.get(p),
                                 clearable=False,
                             ),

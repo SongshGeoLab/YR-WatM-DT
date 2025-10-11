@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { CloudRain } from 'lucide-react';
 import { useScenario } from '../../contexts/ScenarioContext';
+import * as api from '../../services/api';
 
 /**
  * Water Availability Page Component
@@ -12,6 +13,28 @@ import { useScenario } from '../../contexts/ScenarioContext';
 export default function WaterAvailabilityPage() {
   const [selectedScenario, setSelectedScenario] = useState('RCP2.6');
   const { parameters, scenarioResult } = useScenario();
+  const [climateData, setClimateData] = useState<api.ClimateData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load climate data from API
+  useEffect(() => {
+    const loadClimateData = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getClimateData();
+        setClimateData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load climate data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load climate data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadClimateData();
+  }, []);
 
   const scenarios = {
     'RCP2.6': {
@@ -43,86 +66,102 @@ export default function WaterAvailabilityPage() {
     }
   };
 
-  // Generate climate data for different RCP scenarios
-  const climateData = useMemo(() => {
-    const years = Array.from({ length: 81 }, (_, i) => 2020 + i);
+  // Process real climate data from API
+  const processedClimateData = useMemo(() => {
+    if (!climateData) return null;
 
-    return {
-      years,
-      rcp26: {
-        temp: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 15 + progress * 1.5 + Math.sin(progress * Math.PI * 4) * 0.3;
-        }),
-        precip: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 450 + progress * 20 + Math.sin(progress * Math.PI * 3) * 15;
-        })
-      },
-      rcp45: {
-        temp: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 15 + progress * 2.5 + Math.sin(progress * Math.PI * 4) * 0.4;
-        }),
-        precip: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 450 + progress * 10 + Math.sin(progress * Math.PI * 3) * 20;
-        })
-      },
-      rcp85: {
-        temp: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 15 + progress * 4.5 + Math.sin(progress * Math.PI * 4) * 0.5;
-        }),
-        precip: years.map(year => {
-          const progress = (year - 2020) / 80;
-          return 450 - progress * 15 + Math.sin(progress * Math.PI * 3) * 25;
-        })
-      }
+    // Map API scenario names to display names
+    const scenarioMapping = {
+      'ssp126_corrected': 'RCP2.6-SSP1',
+      'ssp245_corrected': 'RCP4.5-SSP2',
+      'ssp585_corrected': 'RCP8.5-SSP5'
     };
-  }, []);
+
+    const processed = {
+      rcp26: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
+      rcp45: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
+      rcp85: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } }
+    };
+
+    // Process temperature data
+    Object.entries(climateData.temperature).forEach(([scenario, data]) => {
+      const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
+      if (displayName === 'RCP2.6-SSP1') processed.rcp26.temp = data;
+      else if (displayName === 'RCP4.5-SSP2') processed.rcp45.temp = data;
+      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.temp = data;
+    });
+
+    // Process precipitation data
+    Object.entries(climateData.precipitation).forEach(([scenario, data]) => {
+      const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
+      if (displayName === 'RCP2.6-SSP1') processed.rcp26.precip = data;
+      else if (displayName === 'RCP4.5-SSP2') processed.rcp45.precip = data;
+      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.precip = data;
+    });
+
+    return processed;
+  }, [climateData]);
 
   // RCP Climate Scenario Pathways chart data
-  const rcpPathwaysData = useMemo(() => [
-    {
-      type: 'scatter',
-      mode: 'lines',
-      x: climateData.years,
-      y: climateData.rcp26.temp,
-      name: 'RCP2.6-SSP1',
-      line: { color: '#10b981', width: 3 },
-      hovertemplate: '<b>RCP2.6-SSP1</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
-    },
-    {
-      type: 'scatter',
-      mode: 'lines',
-      x: climateData.years,
-      y: climateData.rcp45.temp,
-      name: 'RCP4.5-SSP2',
-      line: { color: '#f59e0b', width: 3 },
-      hovertemplate: '<b>RCP4.5-SSP2</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
-    },
-    {
-      type: 'scatter',
-      mode: 'lines',
-      x: climateData.years,
-      y: climateData.rcp85.temp,
-      name: 'RCP8.5-SSP5',
-      line: { color: '#ef4444', width: 3 },
-      hovertemplate: '<b>RCP8.5-SSP5</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
+  const rcpPathwaysData = useMemo(() => {
+    if (!processedClimateData) return [];
+
+    const traces: any[] = [];
+
+    if (processedClimateData.rcp26.temp.years && processedClimateData.rcp26.temp.years.length > 0) {
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        x: processedClimateData.rcp26.temp.years,
+        y: processedClimateData.rcp26.temp.values,
+        name: 'RCP2.6-SSP1',
+        line: { color: '#10b981', width: 3 },
+        hovertemplate: '<b>RCP2.6-SSP1</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
+      });
     }
-  ], [climateData]);
+
+    if (processedClimateData.rcp45.temp.years && processedClimateData.rcp45.temp.years.length > 0) {
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        x: processedClimateData.rcp45.temp.years,
+        y: processedClimateData.rcp45.temp.values,
+        name: 'RCP4.5-SSP2',
+        line: { color: '#f59e0b', width: 3 },
+        hovertemplate: '<b>RCP4.5-SSP2</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
+      });
+    }
+
+    if (processedClimateData.rcp85.temp.years && processedClimateData.rcp85.temp.years.length > 0) {
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        x: processedClimateData.rcp85.temp.years,
+        y: processedClimateData.rcp85.temp.values,
+        name: 'RCP8.5-SSP5',
+        line: { color: '#ef4444', width: 3 },
+        hovertemplate: '<b>RCP8.5-SSP5</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
+      });
+    }
+
+    return traces;
+  }, [processedClimateData]);
 
   // Temperature & Precipitation Trends chart data
   const tempPrecipData = useMemo(() => {
-    const selectedData = climateData[selectedScenario.toLowerCase().replace('.', '')];
+    if (!processedClimateData) return [];
+
+    const scenarioKey = selectedScenario.toLowerCase().replace('.', '') as keyof typeof processedClimateData;
+    const selectedData = processedClimateData[scenarioKey];
+
+    if (!selectedData || !selectedData.temp.years || !selectedData.precip.years) return [];
 
     return [
       {
         type: 'scatter',
         mode: 'lines',
-        x: climateData.years,
-        y: selectedData.temp,
+        x: selectedData.temp.years,
+        y: selectedData.temp.values,
         name: 'Temperature',
         yaxis: 'y',
         line: { color: '#ef4444', width: 3 },
@@ -131,19 +170,20 @@ export default function WaterAvailabilityPage() {
       {
         type: 'scatter',
         mode: 'lines',
-        x: climateData.years,
-        y: selectedData.precip,
+        x: selectedData.precip.years,
+        y: selectedData.precip.values,
         name: 'Precipitation',
         yaxis: 'y2',
         line: { color: '#3b82f6', width: 3 },
         hovertemplate: '<b>Precipitation</b><br>Year: %{x}<br>Value: %{y:.1f} mm<extra></extra>'
       }
     ];
-  }, [climateData, selectedScenario]);
+  }, [processedClimateData, selectedScenario]);
 
   // Surface Water Availability chart data
   const surfaceWaterData = useMemo(() => {
-    const years = climateData.years;
+    // Use a representative time range from climate data or default
+    const years = processedClimateData?.rcp26?.temp?.years || Array.from({ length: 81 }, (_, i) => 2020 + i);
 
     if (scenarioResult?.isSingleScenario) {
       // Single scenario - show one line
@@ -194,7 +234,43 @@ export default function WaterAvailabilityPage() {
         }
       ];
     }
-  }, [climateData.years, scenarioResult]);
+  }, [processedClimateData, scenarioResult]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full bg-cyan-500 flex items-center justify-center text-white shadow-lg mx-auto mb-4">
+            <CloudRain className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Loading Climate Data...</h2>
+          <p className="text-sm text-muted-foreground">Fetching RCP scenario data from server</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg mx-auto mb-4">
+            <CloudRain className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Error Loading Climate Data</h2>
+          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
