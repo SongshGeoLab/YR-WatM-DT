@@ -313,42 +313,66 @@ export default function WaterAvailabilityPage() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-2 gap-4 h-[calc(100%-12rem)]">
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-2 min-h-0">
           <div className="flex-1 min-h-0">
             <PlotlyChart
-              id="rcp-climate-scenarios"
-              data={rcpPathwaysData}
+              id="demo-image-chart"
+              data={[{
+                type: 'scatter',
+                x: [0, 100],
+                y: [0, 100],
+                mode: 'markers',
+                marker: {
+                  size: 1,
+                  color: 'transparent'
+                },
+                showlegend: false,
+                hoverinfo: 'none'
+              }]}
               layout={{
                 title: {
-                  text: 'RCP Climate Scenario Pathways',
+                  text: 'Climate Scenarios Overview',
                   x: 0.5,
                   xanchor: 'center',
                   font: { size: 16 }
                 },
                 xaxis: {
-                  title: 'Year',
-                  range: [2020, 2100],
-                  showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)'
+                  visible: false,
+                  fixedrange: false,
+                  range: [0, 100]
                 },
                 yaxis: {
-                  title: 'Temperature (°C)',
-                  showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)'
+                  visible: false,
+                  fixedrange: false,
+                  range: [0, 100],
+                  scaleanchor: 'x',
+                  scaleratio: 1
                 },
                 plot_bgcolor: 'white',
                 paper_bgcolor: 'transparent',
-                height: 300,
+                height: 400,
                 font: { family: 'Arial, sans-serif', size: 12 },
-                hovermode: 'x unified',
-                legend: {
-                  orientation: 'h',
-                  y: -0.15,
+                margin: { l: 20, r: 20, t: 50, b: 20 },
+                images: [{
+                  source: '/demo.png',
+                  xref: 'paper',
+                  yref: 'paper',
                   x: 0.5,
-                  xanchor: 'center'
-                }
+                  y: 1,
+                  sizex: 0.9,
+                  sizey: 0.9,
+                  xanchor: 'center',
+                  yanchor: 'top',
+                  sizing: 'contain',
+                  layer: 'below'
+                }]
               }}
-              config={{ responsive: true, displayModeBar: false }}
+              config={{
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+              }}
               height="100%"
             />
           </div>
@@ -429,7 +453,8 @@ export default function WaterAvailabilityPage() {
                 paper_bgcolor: 'transparent',
                 height: 400,
                 font: { family: 'Arial, sans-serif', size: 12 },
-                hovermode: 'x unified'
+                hovermode: 'x unified',
+                showlegend: false
               }}
               config={{ responsive: true, displayModeBar: false }}
               height="100%"
