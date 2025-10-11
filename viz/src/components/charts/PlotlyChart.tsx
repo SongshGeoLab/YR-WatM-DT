@@ -32,23 +32,39 @@ export function PlotlyChart({
 
     if (data && data.length > 0) {
       // Create the plot with actual data
-      Plotly.newPlot(chartRef.current, data, layout || {}, {
+      const plotConfig = {
         responsive: true,
         displaylogo: false,
-        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
+        toImageButtonOptions: {
+          format: 'png',
+          filename: title?.replace(/\s+/g, '_').toLowerCase() || 'chart',
+          height: 600,
+          width: 1200,
+          scale: 2
+        },
         ...config
-      }).then(() => {
+      };
+
+      Plotly.newPlot(chartRef.current, data, layout || {}, plotConfig).then(() => {
         // Ensure chart is properly sized after creation
         Plotly.Plots.resize(chartRef.current);
+
+        // Add smooth transitions for better UX
+        Plotly.relayout(chartRef.current, {
+          'transition.duration': 500,
+          'transition.easing': 'cubic-in-out'
+        });
       });
     } else {
       // Show placeholder when no data
       const isDark = document.documentElement.classList.contains('dark') ||
                      window.matchMedia('(prefers-color-scheme: dark)').matches;
       const textColor = isDark ? 'text-gray-300' : 'text-gray-500';
+      const bgColor = isDark ? 'bg-gray-800' : 'bg-gray-50';
 
       chartRef.current.innerHTML = `
-        <div class="flex items-center justify-center h-full">
+        <div class="flex items-center justify-center h-full ${bgColor}">
           <div class="text-center ${textColor}">
             <div class="text-4xl mb-2">📊</div>
             <div class="font-medium">Plotly Chart: ${title || 'Chart'}</div>

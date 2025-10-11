@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 import polars as pl
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import geopandas as gpd
 
@@ -248,6 +249,24 @@ def get_series(
             "value": df.get_column("value").to_list(),
         },
     }
+
+
+@app.get("/reports/{filename}")
+def get_report_file(filename: str):
+    """Serve report files (JSON, images, etc.) from the reports directory."""
+    file_path = Path("reports") / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+    
+    # Set appropriate media type based on file extension
+    media_type = "application/json" if filename.endswith(".json") else None
+    
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
+    )
 
 
 @app.get("/page5-data")

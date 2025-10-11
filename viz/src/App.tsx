@@ -7,7 +7,7 @@ function useDemographicsSeries(fertility: number, diet: number) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    
+
     (async () => {
       try {
         // Cache params to avoid repeated calls
@@ -20,9 +20,9 @@ function useDemographicsSeries(fertility: number, diet: number) {
           "Ecological water flow variable": params["Ecological water flow variable"][1],
           "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][1]
         };
-        
+
         const { scenario_name } = await api.resolveScenario(values);
-        
+
         // Only fetch the data we need, with smaller time range for faster response
         const [pop, dom, oaVar] = await Promise.all([
           api.getSeries('total_population', scenario_name, { start_step: 624, end_step: 1000 }), // Reduced range
@@ -35,12 +35,12 @@ function useDemographicsSeries(fertility: number, diet: number) {
         const sampleData = (time: number[], value: number[], scale = 1) => {
           const xs: number[] = [];
           const ys: number[] = [];
-          
+
           for (const year of targetYears) {
             // Find closest time point more efficiently
             let closestIdx = 0;
             let minDiff = Math.abs(time[0] - year);
-            
+
             for (let i = 1; i < time.length; i++) {
               const diff = Math.abs(time[i] - year);
               if (diff < minDiff) {
@@ -48,11 +48,11 @@ function useDemographicsSeries(fertility: number, diet: number) {
                 closestIdx = i;
               }
             }
-            
+
             xs.push(Math.round(time[closestIdx]));
             ys.push(value[closestIdx] * scale);
           }
-          
+
           return { x: xs, y: ys };
         };
 
@@ -69,7 +69,7 @@ function useDemographicsSeries(fertility: number, diet: number) {
         }
       }
     })();
-    
+
     return () => { cancelled = true; };
   }, [fertility, diet]);
 
@@ -944,71 +944,11 @@ function AgriculturePage() {
   );
 }
 
+// Import the WaterStressPageReady component with real charts
+import WaterStressPageReady from './components/pages/WaterStressPageReady';
+
 function WaterStressPage() {
-  return (
-    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
-      <div className="flex items-center gap-6 mb-6">
-        <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg">
-          <Gauge className="w-8 h-8" />
-        </div>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-foreground">Water Stress</h1>
-            <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-              Page 6
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">Water Stress Index & Critical Threshold Analysis</p>
-        </div>
-      </div>
-
-      <div className="space-y-4 h-[calc(100%-4rem)] flex flex-col">
-        {/* Description */}
-        <div className="text-foreground leading-relaxed text-base flex-shrink-0">
-          <p>
-            Almost all climate and socioeconomic changes will affect the water balance pressure in the YRB.
-            <span className="font-medium"> The water stress index combines demand-to-supply ratios with seasonal variability patterns,</span> showing
-            critical stress levels projected to emerge clearly by 2050 across multiple scenarios.
-            Peak stress occurs during summer months when irrigation demand coincides with reduced precipitation.
-          </p>
-        </div>
-
-        {/* Main Chart - Takes most of the space */}
-        <div className="flex-1 min-h-0">
-          <PlotlyChart
-            id="water-stress-index-timeseries"
-            title="Water Stress Index (WSI) Time Series Analysis"
-            description="Yellow River Basin - Mean and Confidence Interval | Critical Stress Thresholds"
-            height="100%"
-          />
-        </div>
-
-        {/* Statistics Dashboard - Bottom */}
-        <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-red-700 dark:text-red-300">0.6</div>
-            <div className="text-sm text-red-600 dark:text-red-400">Critical Stress</div>
-            <div className="text-xs text-red-500 dark:text-red-500 mt-1">Threshold Line</div>
-          </div>
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">0.4</div>
-            <div className="text-sm text-orange-600 dark:text-orange-400">High Stress</div>
-            <div className="text-xs text-orange-500 dark:text-orange-500 mt-1">Warning Level</div>
-          </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">2050</div>
-            <div className="text-sm text-blue-600 dark:text-blue-400">Critical Year</div>
-            <div className="text-xs text-blue-500 dark:text-blue-500 mt-1">Peak Stress Period</div>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-green-700 dark:text-green-300">1980-2100</div>
-            <div className="text-sm text-green-600 dark:text-green-400">Analysis Period</div>
-            <div className="text-xs text-green-500 dark:text-green-500 mt-1">120 Years</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <WaterStressPageReady />;
 }
 
 function WaterQualityPage() {
