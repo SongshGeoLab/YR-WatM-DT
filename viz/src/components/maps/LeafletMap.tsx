@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getYellowRiverBasin, YellowRiverBasinData } from '../../services/api';
 
 interface LeafletMapProps {
   id: string;
@@ -6,20 +7,139 @@ interface LeafletMapProps {
   height?: string;
 }
 
+declare global {
+  interface Window {
+    L: any;
+  }
+}
+
 export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Placeholder for Leaflet integration
-    // When you're ready to integrate Leaflet with backend data, you can add the actual map logic here
-    if (mapRef.current && window.L) {
-      // Example Leaflet initialization (commented out until you add Leaflet)
-      // const map = L.map(mapRef.current).setView([35.0, 110.0], 6);
-      // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    }
+    const initializeMap = async () => {
+      console.log('🗺️ Initializing Leaflet map...');
+      console.log('Map ref:', mapRef.current);
+      console.log('Leaflet available:', !!window.L);
+
+      // Wait a bit for Leaflet to load if not immediately available
+      if (!window.L) {
+        console.log('⏳ Waiting for Leaflet library to load...');
+        let attempts = 0;
+        while (!window.L && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+      }
+
+      if (!mapRef.current || !window.L) {
+        console.error('❌ Leaflet library not loaded or map ref not available');
+        setError('Leaflet library not loaded');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Initialize map centered on Yellow River Basin
+        const map = window.L.map(mapRef.current, {
+          zoomControl: true,
+          attributionControl: true
+        }).setView([35.0, 110.0], 6);
+
+        mapInstanceRef.current = map;
+
+        // Add multiple tile layers
+        const osmLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          name: 'OpenStreetMap'
+        });
+
+        const satelliteLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '© Esri',
+          name: 'Satellite'
+        });
+
+        const cartoLayer = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© CartoDB',
+          name: 'CartoDB Light'
+        });
+
+        const darkLayer = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© CartoDB',
+          name: 'CartoDB Dark'
+        });
+
+        // Add default layer
+        osmLayer.addTo(map);
+
+        // Add layer control
+        const baseMaps = {
+          'OpenStreetMap': osmLayer,
+          'Satellite': satelliteLayer,
+          'CartoDB Light': cartoLayer,
+          'CartoDB Dark': darkLayer
+        };
+
+        window.L.control.layers(baseMaps).addTo(map);
+
+        // Load Yellow River Basin boundary
+        try {
+          console.log('🌊 Loading Yellow River Basin data...');
+          const basinData: YellowRiverBasinData = await getYellowRiverBasin();
+          console.log('✅ Basin data loaded:', basinData);
+
+          // Add Yellow River Basin boundary
+          const basinLayer = window.L.geoJSON(basinData, {
+            style: {
+              fillColor: '#3186cc',
+              color: '#0d47a1',
+              weight: 2,
+              fillOpacity: 0.2
+            },
+            onEachFeature: (feature: any, layer: any) => {
+              layer.bindPopup('黄河流域边界<br/>Yellow River Basin');
+            }
+          }).addTo(map);
+
+          console.log('🗺️ Basin layer added to map:', basinLayer);
+          console.log('📐 Layer bounds:', basinLayer.getBounds());
+
+          // Fit map to basin bounds
+          if (basinLayer.getBounds().isValid()) {
+            console.log('🎯 Fitting map to basin bounds...');
+            map.fitBounds(basinLayer.getBounds(), { padding: [20, 20] });
+          } else {
+            console.warn('⚠️ Basin layer bounds are invalid');
+          }
+        } catch (basinError) {
+          console.error('❌ Failed to load Yellow River Basin data:', basinError);
+          // Continue without basin data
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error initializing map:', err);
+        setError('Failed to initialize map');
+        setLoading(false);
+      }
+    };
+
+    initializeMap();
+
+    // Cleanup
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, []);
 
-  return (
+  if (loading) {
+    return (
       <div
         ref={mapRef}
         id={id}
@@ -27,12 +147,40 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         style={{ height }}
       >
         <div className="text-center text-gray-500">
-          <div className="text-2xl">🗺️</div>
-          <div className="font-medium text-sm mt-1">Yellow River Basin Map</div>
-          <div className="text-xs text-gray-400 mt-1 leading-tight">
-            Interactive geographic visualization
-          </div>
+          <div className="animate-spin text-2xl mb-2">🗺️</div>
+          <div className="font-medium text-sm">Loading map...</div>
         </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        ref={mapRef}
+        id={id}
+        className={`map-container bg-red-50 rounded-lg flex items-center justify-center border border-red-200 ${className}`}
+        style={{ height }}
+      >
+        <div className="text-center text-red-500">
+          <div className="text-2xl mb-2">⚠️</div>
+          <div className="font-medium text-sm">Map Error</div>
+          <div className="text-xs text-red-400 mt-1">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={mapRef}
+      id={id}
+      className={`map-container ${className}`}
+      style={{
+        height,
+        position: 'relative',
+        zIndex: 1
+      }}
+    />
   );
 }

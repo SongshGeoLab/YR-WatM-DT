@@ -502,3 +502,45 @@ def get_climate_data():
         raise HTTPException(
             status_code=500, detail=f"Error loading climate data: {str(e)}"
         )
+
+
+@app.get("/yellow-river-basin")
+async def get_yellow_river_basin():
+    """Get Yellow River Basin boundary as GeoJSON.
+
+    Returns:
+        GeoJSON containing the Yellow River Basin boundary geometry.
+    """
+    try:
+        # Check cache first
+        if "yellow_river_basin" in GEOJSON_CACHE:
+            return GEOJSON_CACHE["yellow_river_basin"]
+
+        # Path to the shapefile (from config)
+        shp_path = (
+            Path.home() / "Documents/Datasets/黄河流域矢量图/空间范围/huanghe.shp"
+        )
+
+        if not shp_path.exists():
+            raise HTTPException(
+                status_code=404, detail="Yellow River Basin shapefile not found"
+            )
+
+        # Read shapefile and convert to GeoJSON
+        gdf = gpd.read_file(shp_path)
+
+        # Convert to WGS84 if needed
+        if gdf.crs != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+
+        # Convert to GeoJSON
+        geojson = gdf.__geo_interface__
+
+        # Cache the result
+        GEOJSON_CACHE["yellow_river_basin"] = geojson
+
+        return geojson
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error loading Yellow River Basin data: {str(e)}"
+        )

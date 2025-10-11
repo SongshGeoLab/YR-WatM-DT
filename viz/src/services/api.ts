@@ -148,3 +148,23 @@ export async function getClimateData(): Promise<ClimateData> {
   }
   return response.json();
 }
+
+export interface YellowRiverBasinData {
+  type: string;
+  features: Array<{
+    type: string;
+    properties: Record<string, any>;
+    geometry: {
+      type: string;
+      coordinates: any;
+    };
+  }>;
+}
+
+export async function getYellowRiverBasin(): Promise<YellowRiverBasinData> {
+  const response = await fetch(`${API_BASE_URL}/yellow-river-basin`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Yellow River Basin data: ${response.statusText}`);
+  }
+  return response.json();
+}
