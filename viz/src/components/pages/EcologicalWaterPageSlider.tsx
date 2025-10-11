@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { TreePine } from 'lucide-react';
 import * as api from '../../services/api';
-import { useScenario } from '../../contexts/ScenarioContext';
+import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 
 // Helper function to detect dark mode
 const isDarkMode = () => {
@@ -13,6 +13,88 @@ const isDarkMode = () => {
            window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
   return false;
+};
+
+// Chart component with confidence intervals support
+const EcologicalChartWithCI = ({ data, scenarioResult, selectedVariable, availableVariables }: {
+  data: any;
+  scenarioResult: any;
+  selectedVariable: string;
+  availableVariables: any[];
+}) => {
+  const variable = availableVariables.find(v => v.name === selectedVariable);
+  const plotData = React.useMemo(() => {
+    if (!data || !data.series) return [];
+
+    const series = data.series;
+    const traces: any[] = [];
+
+    // Add confidence interval if available
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      // Lower bound
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
+        type: 'scatter',
+        mode: 'lines',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+
+      // Upper bound with fill
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(16, 185, 129, 0.2)', // Green with transparency
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+    }
+
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#10b981', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Mean' : variable?.label || selectedVariable,
+    });
+
+    return traces;
+  }, [data, scenarioResult, selectedVariable, availableVariables]);
+
+  return (
+    <PlotlyChart
+      id="ecological-water-with-ci"
+      height="500px"
+      data={plotData}
+      layout={{
+        title: {
+          text: `Ecological Water Flow Impact on ${variable?.label || selectedVariable} (2020-2100)`,
+          font: { size: 16 }
+        },
+        xaxis: {
+          title: 'Year',
+          gridcolor: isDarkMode() ? '#374151' : '#e5e7eb'
+        },
+        yaxis: {
+          title: `${variable?.label || selectedVariable} (${variable?.unit || ''})`,
+          gridcolor: isDarkMode() ? '#374151' : '#e5e7eb'
+        },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: isDarkMode() ? '#f9fafb' : '#111827' },
+        height: 500
+      }}
+      config={{ responsive: true, displaylogo: false }}
+    />
+  );
 };
 
 /**
@@ -24,7 +106,7 @@ const isDarkMode = () => {
  * 3. Single variable display with dynamic parameter control
  */
 export function EcologicalWaterPageSlider() {
-  const { parameters, updateParameter } = useScenario();
+  const { parameters, updateParameter, scenarioResult } = useScenario();
   const ecoFlowValue = parameters.ecologicalFlow || 0.25;
   const [selectedVariable, setSelectedVariable] = useState<string>('YRB available surface water');
   const [plotData, setPlotData] = useState<any[]>([]);
@@ -32,6 +114,13 @@ export function EcologicalWaterPageSlider() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<any>(null);
+
+  // Use global scenario series for data with confidence intervals
+  const { data: globalData, loading: globalLoading } = useScenarioSeries(
+    selectedVariable === 'YRB available surface water' ? 'YRB available surface water' :
+    selectedVariable === 'hydrologic station discharge[lijin]' ? 'hydrologic station discharge[lijin]' :
+    'sediment load[lijin]'
+  );
 
   // Available variables
   const availableVariables = [
@@ -44,18 +133,14 @@ export function EcologicalWaterPageSlider() {
   const ecoFlowValues = [0.2, 0.25, 0.3];
   const ecoFlowStep = 0.05;
 
-  useEffect(() => {
-    loadData();
-  }, [ecoFlowValue, selectedVariable]);
+  // Remove old loadData effect - now using global state
 
   // Listen for theme changes and reload data to update chart colors
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleThemeChange = () => {
-      // Small delay to ensure DOM has updated
-      setTimeout(() => {
-        loadData();
-      }, 100);
+      // Theme changed - chart will automatically update via global state
+      console.log('Theme changed, chart will update automatically');
     };
 
     mediaQuery.addEventListener('change', handleThemeChange);
@@ -80,131 +165,7 @@ export function EcologicalWaterPageSlider() {
     };
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Get parameters
-      const params = await api.getParams();
-
-      // Build parameter values with current eco flow value
-      // Use first values for other parameters to ensure scenario exists
-      const values: api.ParameterValues = {
-        "Ecological water flow variable": ecoFlowValue,
-        "Fertility Variation": params["Fertility Variation"][0], // 1.6
-        "water-saving irrigation efficiency ratio": params["water-saving irrigation efficiency ratio"][0], // 0.8
-        "fire generation share province target": params["fire generation share province target"][0], // 0.1
-        "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][0], // 1
-        "Diet change scenario switch": params["Diet change scenario switch"][0] // 1
-      };
-
-      // Resolve scenario
-      console.log('Resolving scenario with values:', values);
-      const result = await api.resolveScenario(values);
-      console.log('Scenario resolution result:', result);
-      const scenario_name = result.scenario_name;
-
-      // Fetch data for selected variable
-      const currentVar = availableVariables.find(v => v.name === selectedVariable);
-      const apiVariableName = currentVar?.apiName || selectedVariable;
-      console.log(`Fetching data for variable: ${apiVariableName}, scenario: ${scenario_name}`);
-      const series = await api.getSeries(apiVariableName, scenario_name, {
-        start_step: 624, // 2020年对应的step
-        end_step: 1904   // 2100年对应的step
-      });
-      console.log('Series data received:', series);
-
-      // Process data for visualization
-      const time = series.series.time;
-      const value = series.series.value;
-
-      // Create plot data for current eco flow value
-      const currentPlotData = [{
-        x: time,
-        y: value,
-        type: 'scatter',
-        mode: 'lines',
-        name: `Eco Flow = ${ecoFlowValue}`,
-        line: { color: '#2ca02c', width: 3 }
-      }];
-
-      setPlotData(currentPlotData);
-
-      // Update layout with dark mode support
-      const currentVariable = availableVariables.find(v => v.name === selectedVariable);
-      const darkMode = isDarkMode();
-
-      setLayout({
-        title: {
-          text: `Ecological Water Flow Impact on ${currentVariable?.label || selectedVariable} (2020-2100)`,
-          font: {
-            size: 16,
-            family: 'Arial',
-            color: darkMode ? '#ffffff' : '#000000'
-          }
-        },
-        xaxis: {
-          title: 'Year',
-          range: [2020, 2100],
-          showgrid: true,
-          gridwidth: 1,
-          gridcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(128, 128, 128, 0.2)',
-          color: darkMode ? '#ffffff' : '#000000',
-          titlefont: { color: darkMode ? '#ffffff' : '#000000' },
-          tickfont: { color: darkMode ? '#ffffff' : '#000000' }
-        },
-        yaxis: {
-          title: `${currentVariable?.label || selectedVariable} (${currentVariable?.unit || ''})`,
-          showgrid: true,
-          gridwidth: 1,
-          gridcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(128, 128, 128, 0.2)',
-          color: darkMode ? '#ffffff' : '#000000',
-          titlefont: { color: darkMode ? '#ffffff' : '#000000' },
-          tickfont: { color: darkMode ? '#ffffff' : '#000000' }
-        },
-        hovermode: 'x unified',
-        legend: {
-          orientation: 'h',
-          yanchor: 'bottom',
-          y: -0.15,
-          xanchor: 'center',
-          x: 0.5,
-          font: { color: darkMode ? '#ffffff' : '#000000' },
-          bgcolor: darkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-          bordercolor: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-        },
-        plot_bgcolor: darkMode ? '#1a1a1a' : '#ffffff',
-        paper_bgcolor: darkMode ? '#1a1a1a' : '#ffffff',
-        template: darkMode ? 'plotly_dark' : 'plotly_white',
-        height: 500,
-        margin: { l: 80, r: 40, t: 80, b: 80 }
-      });
-
-      // Calculate statistics
-      const meanValue = value.reduce((a, b) => a + b, 0) / value.length;
-      const maxValue = Math.max(...value);
-      const minValue = Math.min(...value);
-      const maxIndex = value.indexOf(maxValue);
-      const minIndex = value.indexOf(minValue);
-
-      setStatistics({
-        mean_value: meanValue,
-        max_value: maxValue,
-        max_year: time[maxIndex],
-        min_value: minValue,
-        min_year: time[minIndex],
-        scenario: scenario_name,
-        eco_flow: ecoFlowValue
-      });
-
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Failed to load data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // loadData function removed - now using global state
 
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
@@ -331,20 +292,27 @@ export function EcologicalWaterPageSlider() {
       )}
 
       {/* Main Chart */}
-      <div className="h-[calc(100%-20rem)]">
-        {plotData.length > 0 ? (
+      <div className="mt-6">
+        {globalData ? (
+          <EcologicalChartWithCI
+            data={globalData}
+            scenarioResult={scenarioResult}
+            selectedVariable={selectedVariable}
+            availableVariables={availableVariables}
+          />
+        ) : plotData.length > 0 ? (
           <PlotlyChart
             id="ecological-water-slider"
-            height="100%"
+            height="500px"
             data={plotData}
             layout={layout}
             config={{ responsive: true, displaylogo: false }}
           />
         ) : (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-96">
             <div className="text-center">
               <div className="text-lg font-medium text-muted-foreground">
-                {loading ? 'Loading data...' : 'No data available'}
+                {loading || globalLoading ? 'Loading data...' : 'No data available'}
               </div>
             </div>
           </div>
@@ -354,12 +322,15 @@ export function EcologicalWaterPageSlider() {
       {/* Action Buttons */}
       <div className="mt-4 flex justify-center gap-2">
         <Button
-          onClick={loadData}
-          disabled={loading}
+          onClick={() => {
+            // Force refresh by updating a dummy parameter to trigger re-render
+            console.log('Refresh requested - data will update automatically via global state');
+          }}
+          disabled={globalLoading}
           variant="outline"
           size="sm"
         >
-          {loading ? 'Loading...' : 'Refresh Data'}
+          {globalLoading ? 'Loading...' : 'Refresh Data'}
         </Button>
       </div>
     </div>

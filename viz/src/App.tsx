@@ -25,7 +25,7 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showGlobalParams, setShowGlobalParams] = useState(false);
-  const { scenarioName, loading } = useScenario();
+  const { scenarioResult, loading } = useScenario();
 
   // Initialize dark mode from localStorage or system preference
   useEffect(() => {
@@ -93,21 +93,28 @@ function AppInner() {
               <p className="text-xs text-muted-foreground">Interactive Data Visualization & Scenario Analysis Platform</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {scenarioName && (
-              <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-xs font-medium">
-                Scenario: {scenarioName}
-              </span>
-            )}
-            {loading && (
-              <span className="px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-full text-xs font-medium animate-pulse">
-                Loading...
-              </span>
-            )}
-            <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
-              2020-2100 Projection
-            </span>
-          </div>
+                 <div className="flex items-center gap-2">
+                   {scenarioResult && (
+                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                       scenarioResult.isSingleScenario
+                         ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                         : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                     }`}>
+                       {scenarioResult.isSingleScenario
+                         ? `Scenario: ${scenarioResult.primaryScenario}`
+                         : `Multiple Scenarios (${scenarioResult.count || '?'})`
+                       }
+                     </span>
+                   )}
+                   {loading && (
+                     <span className="px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-full text-xs font-medium animate-pulse">
+                       Loading...
+                     </span>
+                   )}
+                   <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
+                     2020-2100 Projection
+                   </span>
+                 </div>
         </div>
       </div>
 

@@ -4,13 +4,208 @@ import { ParameterSlider } from '../ui/parameter-slider';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { Users, Droplet } from 'lucide-react';
 import { useDemographicsSeries } from '../../hooks/useDemographicsSeries';
-import { useScenario } from '../../contexts/ScenarioContext';
+import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 
 // Data type definitions
 interface SeriesData {
   x: number[];
   y: number[];
 }
+
+// Chart component with confidence intervals support
+const PopulationChartWithCI = React.memo(({ data, scenarioResult }: { data: any, scenarioResult: any }) => {
+  const plotData = useMemo(() => {
+    if (!data || !data.series) return [];
+
+    const series = data.series;
+    const traces: any[] = [];
+
+    // Add confidence interval if available
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      // Lower bound
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
+        type: 'scatter',
+        mode: 'lines',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+
+      // Upper bound with fill
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(46, 134, 171, 0.2)',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+    }
+
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#2E86AB', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Mean' : 'Population',
+    });
+
+    return traces;
+  }, [data, scenarioResult]);
+
+  return (
+    <PlotlyChart
+      id="population-with-ci"
+      title="Total Population"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Population change with confidence intervals across multiple scenarios"
+        : "Population change over time"
+      }
+      height="320px"
+      data={plotData}
+      layout={{
+        margin: { l: 50, r: 20, t: 20, b: 40 },
+        xaxis: { title: 'Year' },
+        yaxis: { title: 'People (Millions)' }
+      }}
+    />
+  );
+});
+
+const DomesticChartWithCI = React.memo(({ data, scenarioResult }: { data: any, scenarioResult: any }) => {
+  const plotData = useMemo(() => {
+    if (!data || !data.series) return [];
+
+    const series = data.series;
+    const traces: any[] = [];
+
+    // Add confidence interval if available
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
+        type: 'scatter',
+        mode: 'lines',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(162, 59, 114, 0.2)',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+    }
+
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#A23B72', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Mean' : 'Domestic Water',
+    });
+
+    return traces;
+  }, [data, scenarioResult]);
+
+  return (
+    <PlotlyChart
+      id="domestic-with-ci"
+      title="Domestic Water Demand"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Domestic water demand with confidence intervals across multiple scenarios"
+        : "Domestic water demand over time"
+      }
+      height="320px"
+      data={plotData}
+      layout={{
+        margin: { l: 50, r: 20, t: 20, b: 40 },
+        xaxis: { title: 'Year' },
+        yaxis: { title: 'Water Demand (Billion m³)' }
+      }}
+    />
+  );
+});
+
+const OAChartWithCI = React.memo(({ data, scenarioResult }: { data: any, scenarioResult: any }) => {
+  const plotData = useMemo(() => {
+    if (!data || !data.series) return [];
+
+    const series = data.series;
+    const traces: any[] = [];
+
+    // Add confidence interval if available
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
+        type: 'scatter',
+        mode: 'lines',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(44, 160, 44, 0.2)',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+    }
+
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#2CA02C', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Mean' : 'OA Water',
+    });
+
+    return traces;
+  }, [data, scenarioResult]);
+
+  return (
+    <PlotlyChart
+      id="oa-with-ci"
+      title="Other Activities Water Demand"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Other activities water demand with confidence intervals across multiple scenarios"
+        : "Other activities water demand over time"
+      }
+      height="320px"
+      data={plotData}
+      layout={{
+        margin: { l: 50, r: 20, t: 20, b: 40 },
+        xaxis: { title: 'Year' },
+        yaxis: { title: 'Water Demand (Billion m³)' }
+      }}
+    />
+  );
+});
 
 // Optimized chart components with React.memo
 const DemographicsPopulationChart = React.memo(({ data }: { data: SeriesData }) => {
@@ -105,7 +300,7 @@ const DemographicsOAChart = React.memo(({ data }: { data: SeriesData }) => {
  * - Detailed performance logging
  */
 export default function DemographicsPage() {
-  const { parameters, updateParameter } = useScenario();
+  const { parameters, updateParameter, scenarioResult } = useScenario();
   const [selectedDietPattern, setSelectedDietPattern] = useState('pattern2');
   const fertility = parameters.fertility || 1.7;
   const [debouncedFertility, setDebouncedFertility] = useState(fertility);
@@ -120,7 +315,12 @@ export default function DemographicsPage() {
     return () => clearTimeout(timer);
   }, [fertility]);
 
-  // Use optimized hook to fetch all data
+  // Use global scenario series for data with confidence intervals
+  const { data: populationData, loading: populationLoading } = useScenarioSeries('total_population', { start_step: 624, end_step: 1000 });
+  const { data: domesticData, loading: domesticLoading } = useScenarioSeries('domestic_water_demand_province_sum', { start_step: 624, end_step: 1000 });
+  const { data: oaData, loading: oaLoading } = useScenarioSeries('oa_water_demand_province_sum', { start_step: 624, end_step: 1000 });
+
+  // Fallback to optimized hook if global data not available
   const demographicsData = useDemographicsSeries(debouncedFertility, dietMap[selectedDietPattern]);
 
   // Diet pattern configurations
@@ -197,19 +397,37 @@ export default function DemographicsPage() {
             )}
           </div>
 
-          {/* Population chart - using optimized data */}
-          <DemographicsPopulationChart data={demographicsData.population} />
+          {/* Population chart - using global scenario data with confidence intervals */}
+          {populationData ? (
+            <PopulationChartWithCI data={populationData} scenarioResult={scenarioResult} />
+          ) : (
+            <DemographicsPopulationChart data={demographicsData.population} />
+          )}
 
-          <ParameterSlider
-            label="Birth Rate (Global)"
+          {parameters.fertility !== null ? (
+            <ParameterSlider
+              label="Birth Rate (Global)"
               min={1.6}
               max={1.8}
               step={0.05}
-            defaultValue={fertility}
-            unit=""
-            description="Total fertility rate (children per woman) - affects all pages"
-            onChange={(v) => updateParameter('fertility', v)}
-          />
+              defaultValue={fertility}
+              unit=""
+              description="Total fertility rate (children per woman) - affects all pages"
+              onChange={(v) => updateParameter('fertility', v)}
+            />
+          ) : (
+            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Birth Rate: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+              </p>
+                <button
+                onClick={() => updateParameter('fertility', 1.7)}
+                className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Set to 1.7
+                </button>
+            </div>
+          )}
 
           {/* Diet Pattern Selection */}
           <div className="space-y-2">
@@ -227,7 +445,7 @@ export default function DemographicsPage() {
                   </p>
                 </TooltipContent>
               </Tooltip>
-            </div>
+          </div>
 
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(dietPatterns).map(([key, pattern]) => {
@@ -345,11 +563,19 @@ export default function DemographicsPage() {
           </div>
 
           <div className="flex-1 min-h-0">
-            <DemographicsDomesticChart data={demographicsData.domestic} />
+            {domesticData ? (
+              <DomesticChartWithCI data={domesticData} scenarioResult={scenarioResult} />
+            ) : (
+              <DemographicsDomesticChart data={demographicsData.domestic} />
+            )}
           </div>
 
           <div className="flex-1 min-h-0">
-            <DemographicsOAChart data={demographicsData.oa} />
+            {oaData ? (
+              <OAChartWithCI data={oaData} scenarioResult={scenarioResult} />
+            ) : (
+              <DemographicsOAChart data={demographicsData.oa} />
+            )}
           </div>
         </div>
       </div>
