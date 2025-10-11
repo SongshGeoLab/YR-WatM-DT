@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '../ui/card';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
+import { useScenario } from '../../contexts/ScenarioContext';
 
 // Dark mode detection helper
 const isDarkMode = () => {
@@ -51,25 +52,27 @@ interface WaterDemandData {
 }
 
 const WaterDemandPageWithExportedData: React.FC = () => {
+  const { parameters, updateParameter } = useScenario();
+
   // State management
   const [compositionData, setCompositionData] = useState<Plotly.Data[]>([]);
   const [compositionLayout, setCompositionLayout] = useState<any>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Plotly.Data[]>([]);
   const [timeSeriesLayout, setTimeSeriesLayout] = useState<any>({});
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<any>(null);
   const [pageData, setPageData] = useState<WaterDemandData | null>(null);
-  
-  // Parameter control state
-  const [waterSavingRatio, setWaterSavingRatio] = useState<number>(0.9);
-  const [energyGeneration, setEnergyGeneration] = useState<number>(0.25);
+
+  // Use global parameters
+  const waterSavingRatio = parameters.irrigationEfficiency || 0.9;
+  const energyGeneration = parameters.fireGenerationShare || 0.25;
 
   // Category colors matching Page5.ipynb
   const categoryColors: Record<string, string> = {
     'Irrigation': '#1f77b4',
-    'Production': '#ff7f0e', 
+    'Production': '#ff7f0e',
     'Other Activities': '#2ca02c',
     'Domestic': '#d62728'
   };
@@ -80,22 +83,8 @@ const WaterDemandPageWithExportedData: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Load data from backend API endpoint
-      const response = await fetch(`/api/page5-data?water_saving_ratio=${waterSavingRatio}&energy_generation=${energyGeneration}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load data: ${response.statusText}`);
-      }
-      
-      const data: WaterDemandData = await response.json();
-      setPageData(data);
-      await updateCharts(data);
-
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Failed to load data:', err);
-      
-      // Fallback to demo data if file not found
-      console.log('Using fallback demo data...');
+      // Use demo data directly (backend integration pending)
+      console.log('Loading demo data for water demand...');
       const demoData: WaterDemandData = {
         parameters: {
           water_saving_ratio: waterSavingRatio,
@@ -132,7 +121,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
           value_range: 45.6
         }
       };
-      
+
       setPageData(demoData);
       await updateCharts(demoData);
       setError(null); // Clear error since we have fallback data
@@ -151,7 +140,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
       labels: data.composition.categories,
       parents: data.composition.categories.map(() => ""),
       values: data.composition.values,
-      text: data.composition.categories.map((category, index) => 
+      text: data.composition.categories.map((category, index) =>
         `${category}<br>${category}<br>${data.composition.percentages[index].toFixed(1)}%`
       ),
       textposition: "middle center",
@@ -267,9 +256,9 @@ const WaterDemandPageWithExportedData: React.FC = () => {
       },
       height: 400,
       hovermode: 'x unified',
-      legend: { 
-        x: 0.02, 
-        y: 0.98, 
+      legend: {
+        x: 0.02,
+        y: 0.98,
         bgcolor: darkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)',
         bordercolor: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
         borderwidth: 1
@@ -334,25 +323,25 @@ const WaterDemandPageWithExportedData: React.FC = () => {
       <div className="mb-6 space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ParameterSlider
-            label="Water-saving Irrigation Efficiency Ratio"
+            label="Irrigation Efficiency (Global)"
             min={0.8}
             max={1.0}
             step={0.05}
             defaultValue={waterSavingRatio}
             unit=""
-            description="Efficiency ratio of water-saving irrigation technology in agriculture"
-            onChange={(value) => setWaterSavingRatio(value)}
+            description="Water-saving irrigation efficiency ratio - affects all pages"
+            onChange={(value) => updateParameter('irrigationEfficiency', value)}
           />
 
           <ParameterSlider
-            label="Fire Generation Share Province Target"
+            label="Fire Generation Share (Global)"
             min={0.1}
             max={0.4}
             step={0.05}
             defaultValue={energyGeneration}
             unit=""
-            description="Target share of fire-based power generation at provincial level"
-            onChange={(value) => setEnergyGeneration(value)}
+            description="Target share of fire-based power generation - affects all pages"
+            onChange={(value) => updateParameter('fireGenerationShare', value)}
           />
         </div>
       </div>
@@ -381,7 +370,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
               Proportional breakdown of water demand by sector and region
             </p>
           </div>
-          
+
           {!loading && compositionData.length > 0 && (
             <PlotlyChart
               id="water-demand-composition"
@@ -391,7 +380,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
               config={{ responsive: true, displaylogo: false }}
             />
           )}
-          
+
           <div className="mt-4 text-sm text-muted-foreground">
             Ready for data integration
           </div>
@@ -405,7 +394,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
               Temporal trends in total water demand (2020-2100)
             </p>
           </div>
-          
+
           {!loading && timeSeriesData.length > 0 && (
             <PlotlyChart
               id="water-demand-timeseries"
@@ -415,7 +404,7 @@ const WaterDemandPageWithExportedData: React.FC = () => {
               config={{ responsive: true, displaylogo: false }}
             />
           )}
-          
+
           <div className="mt-4 text-sm text-muted-foreground">
             Ready for data integration
           </div>

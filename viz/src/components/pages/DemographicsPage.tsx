@@ -4,6 +4,7 @@ import { ParameterSlider } from '../ui/parameter-slider';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { Users, Droplet } from 'lucide-react';
 import { useDemographicsSeries } from '../../hooks/useDemographicsSeries';
+import { useScenario } from '../../contexts/ScenarioContext';
 
 // Data type definitions
 interface SeriesData {
@@ -104,9 +105,10 @@ const DemographicsOAChart = React.memo(({ data }: { data: SeriesData }) => {
  * - Detailed performance logging
  */
 export default function DemographicsPage() {
+  const { parameters, updateParameter } = useScenario();
   const [selectedDietPattern, setSelectedDietPattern] = useState('pattern2');
-  const [fertility, setFertility] = useState(1.7);
-  const [debouncedFertility, setDebouncedFertility] = useState(1.7);
+  const fertility = parameters.fertility || 1.7;
+  const [debouncedFertility, setDebouncedFertility] = useState(fertility);
   const dietMap: Record<string, number> = { pattern1: 1, pattern2: 2, pattern3: 3 };
 
   // Debounce fertility changes to avoid too many API calls
@@ -199,14 +201,14 @@ export default function DemographicsPage() {
           <DemographicsPopulationChart data={demographicsData.population} />
 
           <ParameterSlider
-            label="Birth Rate"
-            min={1.6}
-            max={1.8}
-            step={0.05}
+            label="Birth Rate (Global)"
+              min={1.6}
+              max={1.8}
+              step={0.05}
             defaultValue={fertility}
             unit=""
-            description="Total fertility rate (children per woman) affecting population growth"
-            onChange={(v) => setFertility(v)}
+            description="Total fertility rate (children per woman) - affects all pages"
+            onChange={(v) => updateParameter('fertility', v)}
           />
 
           {/* Diet Pattern Selection */}
@@ -237,7 +239,7 @@ export default function DemographicsPage() {
                 return (
                   <Tooltip key={key}>
                     <TooltipTrigger asChild>
-                      <button
+                <button
                         onClick={() => setSelectedDietPattern(key)}
                         className={`p-2 rounded-lg border-2 transition-all text-center ${
                           selectedDietPattern === key
@@ -248,18 +250,18 @@ export default function DemographicsPage() {
                         <div className="flex justify-center gap-0.5 mb-1">
                           {Array.from({ length: dropletCount }).map((_, i) => (
                             <Droplet key={i} className={`w-3 h-3 ${dropletColor}`} />
-                          ))}
-                        </div>
+              ))}
+            </div>
                         <div className={`font-medium text-sm ${
                           selectedDietPattern === key ? pattern.textColor : 'text-foreground'
                         }`}>
                           {pattern.name}
-                        </div>
+          </div>
                         <div className={`text-xs ${
                           selectedDietPattern === key ? pattern.textColor : 'text-muted-foreground'
                         }`}>
                           {pattern.title}
-                        </div>
+        </div>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
@@ -268,20 +270,20 @@ export default function DemographicsPage() {
                         <div className="text-base opacity-90">{pattern.description}</div>
                         <div className="text-sm mt-2 pt-2 border-t border-white/20">
                           <strong>Water consumption:</strong> {pattern.level}
-                        </div>
-                      </div>
+          </div>
+      </div>
                     </TooltipContent>
                   </Tooltip>
                 );
               })}
-            </div>
+                  </div>
 
             <div className="text-sm text-muted-foreground mt-2">
               Selected: <span className="font-medium text-foreground">
                 {dietPatterns[selectedDietPattern].title} - {dietPatterns[selectedDietPattern].level}
-              </span>
-            </div>
-          </div>
+                        </span>
+                    </div>
+                  </div>
 
           {/* Virtual Water Information Panel */}
           <div className="bg-muted/50 dark:bg-muted/20 border border-border rounded-lg p-3">

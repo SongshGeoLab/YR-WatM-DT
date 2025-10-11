@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { TreePine } from 'lucide-react';
 import * as api from '../../services/api';
+import { useScenario } from '../../contexts/ScenarioContext';
 
 // Helper function to detect dark mode
 const isDarkMode = () => {
@@ -23,7 +24,8 @@ const isDarkMode = () => {
  * 3. Single variable display with dynamic parameter control
  */
 export function EcologicalWaterPageSlider() {
-  const [ecoFlowValue, setEcoFlowValue] = useState<number>(0.25);
+  const { parameters, updateParameter } = useScenario();
+  const ecoFlowValue = parameters.ecologicalFlow || 0.25;
   const [selectedVariable, setSelectedVariable] = useState<string>('YRB available surface water');
   const [plotData, setPlotData] = useState<any[]>([]);
   const [layout, setLayout] = useState<any>({});
@@ -255,7 +257,7 @@ export function EcologicalWaterPageSlider() {
                 key={value}
                 variant={ecoFlowValue === value ? "default" : "outline"}
                 size="sm"
-                onClick={() => setEcoFlowValue(value)}
+                onClick={() => updateParameter('ecologicalFlow', value)}
                 className={ecoFlowValue === value ? "bg-green-600 hover:bg-green-700" : ""}
               >
                 {value}
@@ -272,7 +274,7 @@ export function EcologicalWaterPageSlider() {
             max="2"
             step="1"
             value={ecoFlowValues.indexOf(ecoFlowValue)}
-            onChange={(e) => setEcoFlowValue(ecoFlowValues[parseInt(e.target.value)])}
+            onChange={(e) => updateParameter('ecologicalFlow', ecoFlowValues[parseInt(e.target.value)])}
             className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer slider"
             style={{
               background: `linear-gradient(to right, #10b981 0%, #10b981 ${(ecoFlowValues.indexOf(ecoFlowValue) / 2) * 100}%, #e5e7eb ${(ecoFlowValues.indexOf(ecoFlowValue) / 2) * 100}%, #e5e7eb 100%)`
