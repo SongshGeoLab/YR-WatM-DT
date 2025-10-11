@@ -42,14 +42,29 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         return;
       }
 
+      // Ensure container has dimensions before initializing map
+      const container = mapRef.current;
+      const rect = container.getBoundingClientRect();
+      console.log('📏 Container dimensions:', rect.width, 'x', rect.height);
+      
+      if (rect.width === 0 || rect.height === 0) {
+        console.log('⏳ Container has no dimensions, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       try {
         // Initialize map centered on Yellow River Basin
-        const map = window.L.map(mapRef.current, {
+        const map = window.L.map(container, {
           zoomControl: true,
           attributionControl: true
         }).setView([35.0, 110.0], 6);
 
         mapInstanceRef.current = map;
+        
+        // Ensure map is fully initialized before proceeding
+        map.whenReady(() => {
+          console.log('✅ Map is ready');
+        });
 
         // Add multiple tile layers
         const osmLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -150,10 +165,14 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
 
               // Debug: Log map center and zoom
               setTimeout(() => {
-                console.log('🗺️ Map center:', map.getCenter());
-                console.log('🔍 Map zoom:', map.getZoom());
-                console.log('📏 Map bounds:', map.getBounds());
-                console.log('🌊 Basin layer visible:', map.hasLayer(basinLayer));
+                try {
+                  console.log('🗺️ Map center:', map.getCenter());
+                  console.log('🔍 Map zoom:', map.getZoom());
+                  console.log('📏 Map bounds:', map.getBounds());
+                  console.log('🌊 Basin layer visible:', map.hasLayer(basinLayer));
+                } catch (debugError) {
+                  console.warn('⚠️ Debug info failed:', debugError);
+                }
               }, 1000);
             } else {
               console.warn('⚠️ Basin layer bounds are invalid');
