@@ -4,6 +4,13 @@
 
 A decision theater application for exploring water management scenarios in the Yellow River Basin (YRB), combining Python-based data processing with a React frontend for interactive visualization.
 
+## 📖 User Guides
+
+- **[中文用户手册](USER_GUIDE_CN.md)** - 完整的中文使用指南
+- **[English User Guide](USER_GUIDE_EN.md)** - Complete English usage guide
+
+For end users, please refer to the user guides above. The technical documentation below is for developers and system administrators.
+
 ---
 
 ## Architecture
