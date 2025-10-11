@@ -25,6 +25,7 @@ import polars as pl
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 DATA_PARQUET = Path("data_parquet")
@@ -138,6 +139,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for GeoJSON data
+app.mount("/static", StaticFiles(directory="data"), name="static")
 
 
 @app.get("/")
@@ -516,25 +520,17 @@ async def get_yellow_river_basin():
         if "yellow_river_basin" in GEOJSON_CACHE:
             return GEOJSON_CACHE["yellow_river_basin"]
 
-        # Path to the shapefile (from config)
-        shp_path = (
-            Path.home() / "Documents/Datasets/黄河流域矢量图/空间范围/huanghe.shp"
-        )
+        # Path to the GeoJSON file in project directory
+        geojson_path = DATA_DIR / "yellow_river_basin.geojson"
 
-        if not shp_path.exists():
+        if not geojson_path.exists():
             raise HTTPException(
-                status_code=404, detail="Yellow River Basin shapefile not found"
+                status_code=404, detail="Yellow River Basin GeoJSON not found"
             )
 
-        # Read shapefile and convert to GeoJSON
-        gdf = gpd.read_file(shp_path)
-
-        # Convert to WGS84 if needed
-        if gdf.crs != "EPSG:4326":
-            gdf = gdf.to_crs("EPSG:4326")
-
-        # Convert to GeoJSON
-        geojson = gdf.__geo_interface__
+        # Read GeoJSON file
+        with open(geojson_path, "r", encoding="utf-8") as f:
+            geojson = json.load(f)
 
         # Cache the result
         GEOJSON_CACHE["yellow_river_basin"] = geojson

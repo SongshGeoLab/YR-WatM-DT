@@ -162,6 +162,17 @@ export interface YellowRiverBasinData {
 }
 
 export async function getYellowRiverBasin(): Promise<YellowRiverBasinData> {
+  // Try static file first (more reliable)
+  try {
+    const response = await fetch(`${API_BASE_URL}/static/yellow_river_basin.geojson`);
+    if (response.ok) {
+      return response.json();
+    }
+  } catch (error) {
+    console.warn('Failed to fetch from static file, trying API endpoint:', error);
+  }
+
+  // Fallback to API endpoint
   const response = await fetch(`${API_BASE_URL}/yellow-river-basin`);
   if (!response.ok) {
     throw new Error(`Failed to fetch Yellow River Basin data: ${response.statusText}`);

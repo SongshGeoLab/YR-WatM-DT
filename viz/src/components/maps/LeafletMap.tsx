@@ -83,7 +83,29 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           'CartoDB Dark': darkLayer
         };
 
-        window.L.control.layers(baseMaps).addTo(map);
+        const layerControl = window.L.control.layers(baseMaps).addTo(map);
+
+        // Store layers for later reference
+        map._basinLayer = null;
+
+        // Create a layer group for overlays
+        const overlayGroup = window.L.layerGroup().addTo(map);
+        map._overlayGroup = overlayGroup;
+
+        // Add a test marker to ensure map is working
+        const testMarker = window.L.marker([35.0, 110.0])
+          .bindPopup('Test marker - Map is working!')
+          .addTo(overlayGroup);
+        console.log('📍 Test marker added:', testMarker);
+
+        // Add event listeners for debugging
+        map.on('layeradd', (e) => {
+          console.log('➕ Layer added:', e.layer);
+        });
+
+        map.on('layerremove', (e) => {
+          console.log('➖ Layer removed:', e.layer);
+        });
 
         // Load Yellow River Basin boundary
         try {
@@ -91,29 +113,51 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           const basinData: YellowRiverBasinData = await getYellowRiverBasin();
           console.log('✅ Basin data loaded:', basinData);
 
-          // Add Yellow River Basin boundary
+          // Create Yellow River Basin boundary layer
           const basinLayer = window.L.geoJSON(basinData, {
             style: {
               fillColor: '#3186cc',
               color: '#0d47a1',
-              weight: 2,
-              fillOpacity: 0.2
+              weight: 3,
+              fillOpacity: 0.3,
+              opacity: 0.8
             },
             onEachFeature: (feature: any, layer: any) => {
               layer.bindPopup('黄河流域边界<br/>Yellow River Basin');
             }
-          }).addTo(map);
+          });
+
+          // Store reference to basin layer
+          map._basinLayer = basinLayer;
+
+          // Add basin layer to overlay group to ensure it stays visible
+          setTimeout(() => {
+            basinLayer.addTo(map._overlayGroup);
+            console.log('🎨 Applied styles and added basin layer to overlay group');
+          }, 100);
 
           console.log('🗺️ Basin layer added to map:', basinLayer);
           console.log('📐 Layer bounds:', basinLayer.getBounds());
 
-          // Fit map to basin bounds
-          if (basinLayer.getBounds().isValid()) {
-            console.log('🎯 Fitting map to basin bounds...');
-            map.fitBounds(basinLayer.getBounds(), { padding: [20, 20] });
-          } else {
-            console.warn('⚠️ Basin layer bounds are invalid');
-          }
+          // Fit map to basin bounds with delay to ensure layer is added
+          setTimeout(() => {
+            if (basinLayer.getBounds().isValid()) {
+              console.log('🎯 Fitting map to basin bounds...');
+              const bounds = basinLayer.getBounds();
+              console.log('📍 Bounds:', bounds.toString());
+              map.fitBounds(bounds, { padding: [20, 20] });
+
+              // Debug: Log map center and zoom
+              setTimeout(() => {
+                console.log('🗺️ Map center:', map.getCenter());
+                console.log('🔍 Map zoom:', map.getZoom());
+                console.log('📏 Map bounds:', map.getBounds());
+                console.log('🌊 Basin layer visible:', map.hasLayer(basinLayer));
+              }, 1000);
+            } else {
+              console.warn('⚠️ Basin layer bounds are invalid');
+            }
+          }, 200);
         } catch (basinError) {
           console.error('❌ Failed to load Yellow River Basin data:', basinError);
           // Continue without basin data
