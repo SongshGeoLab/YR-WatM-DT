@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getYellowRiverBasin, YellowRiverBasinData } from '../../services/api';
 
 interface LeafletMapProps {
@@ -58,43 +58,35 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         // Initialize map centered on Yellow River Basin
         const map = window.L.map(container, {
           zoomControl: true,
-          attributionControl: true
+          attributionControl: true,
+          preferCanvas: false
         }).setView([35.0, 110.0], 6);
 
         mapInstanceRef.current = map;
 
-        // Ensure map is fully initialized and force re-render
-        map.whenReady(() => {
-          // Force map to re-render after a delay (fixes initial load issue)
-          setTimeout(() => {
-            map.invalidateSize();
-            map.eachLayer((layer: any) => {
-              if (layer.redraw) {
-                layer.redraw();
-              }
-            });
-          }, 500);
-        });
-
         // Add multiple tile layers
         const osmLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
-          name: 'OpenStreetMap'
+          name: 'OpenStreetMap',
+          maxZoom: 19
         });
 
         const satelliteLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
           attribution: '© Esri',
-          name: 'Satellite'
+          name: 'Satellite',
+          maxZoom: 19
         });
 
         const cartoLayer = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '© CartoDB',
-          name: 'CartoDB Light'
+          name: 'CartoDB Light',
+          maxZoom: 19
         });
 
         const darkLayer = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
           attribution: '© CartoDB',
-          name: 'CartoDB Dark'
+          name: 'CartoDB Dark',
+          maxZoom: 19
         });
 
         // Add default layer
@@ -122,6 +114,12 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           .bindPopup('Test marker - Map is working!')
           .addTo(overlayGroup);
 
+        // Critical: Force map to recognize its size immediately after initialization
+        // This ensures tiles load correctly on first render
+        setTimeout(() => {
+          map.invalidateSize(true);
+        }, 100);
+
         // Load Yellow River Basin boundary
         try {
           const basinData: YellowRiverBasinData = await getYellowRiverBasin();
@@ -144,22 +142,30 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           map._basinLayer = basinLayer;
 
           // Add basin layer to overlay group to ensure it stays visible
-          setTimeout(() => {
-            basinLayer.addTo(map._overlayGroup);
-          }, 100);
+          basinLayer.addTo(map._overlayGroup);
 
           // Fit map to basin bounds
-          setTimeout(() => {
-            if (basinLayer.getBounds().isValid()) {
-              const bounds = basinLayer.getBounds();
-              map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-            }
-          }, 200);
+          if (basinLayer.getBounds().isValid()) {
+            const bounds = basinLayer.getBounds();
+            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
+
+            // Invalidate size after fitting bounds to ensure proper tile loading
+            setTimeout(() => {
+              map.invalidateSize(true);
+            }, 100);
+          }
         } catch (basinError) {
           console.error('Failed to load Yellow River Basin data:', basinError);
         }
 
+        // Hide loading overlay after map is fully initialized
         setLoading(false);
+
+        // Final size check after loading completes
+        setTimeout(() => {
+          map.invalidateSize(true);
+        }, 200);
+
       } catch (err) {
         console.error('Error initializing map:', err);
         setError('Failed to initialize map');
@@ -178,52 +184,52 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div
-        ref={mapRef}
-        id={id}
-        className={`map-container bg-blue-50 rounded-lg flex items-center justify-center border border-gray-200 ${className}`}
-        style={{ height }}
-      >
-        <div className="text-center text-gray-500">
-          <div className="animate-spin text-2xl mb-2">🗺️</div>
-          <div className="font-medium text-sm">Loading map...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        ref={mapRef}
-        id={id}
-        className={`map-container bg-red-50 rounded-lg flex items-center justify-center border border-red-200 ${className}`}
-        style={{ height }}
-      >
-        <div className="text-center text-red-500">
-          <div className="text-2xl mb-2">⚠️</div>
-          <div className="font-medium text-sm">Map Error</div>
-          <div className="text-xs text-red-400 mt-1">{error}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      ref={mapRef}
-      id={id}
-      className={`map-container ${className}`}
       style={{
         height,
         width: '100%',
-        position: 'relative',
-        zIndex: 1,
-        display: 'block',
-        overflow: 'hidden'
+        position: 'relative'
       }}
-    />
+    >
+      <div
+        ref={mapRef}
+        id={id}
+        className={`map-container ${className}`}
+        style={{
+          height: '100%',
+          width: '100%',
+          position: 'relative',
+          zIndex: 1,
+          display: 'block',
+          overflow: 'hidden'
+        }}
+      />
+
+      {loading && (
+        <div
+          className="absolute inset-0 bg-blue-50 rounded-lg flex items-center justify-center border border-gray-200"
+          style={{ zIndex: 2 }}
+        >
+          <div className="text-center text-gray-500">
+            <div className="animate-spin text-2xl mb-2">🗺️</div>
+            <div className="font-medium text-sm">Loading map...</div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="absolute inset-0 bg-red-50 rounded-lg flex items-center justify-center border border-red-200"
+          style={{ zIndex: 2 }}
+        >
+          <div className="text-center text-red-500">
+            <div className="text-2xl mb-2">⚠️</div>
+            <div className="font-medium text-sm">Map Error</div>
+            <div className="text-xs text-red-400 mt-1">{error}</div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
