@@ -1,7 +1,8 @@
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useScenario } from '../contexts/ScenarioContext';
 import { ParameterSlider } from './ui/parameter-slider';
+import { getPresetScenarios, PresetScenario } from '../services/config';
 
 /**
  * Global Parameter Control Panel
@@ -12,8 +13,17 @@ import { ParameterSlider } from './ui/parameter-slider';
  * @param onClose - Callback when panel is closed
  */
 export default function GlobalParameterPanel({ onClose }: { onClose: () => void }) {
-  const { parameters, updateParameter, resetParameters, scenarioResult, loading } = useScenario();
+  const { parameters, updateParameter, resetParameters, scenarioResult, loading, applyPresetScenario } = useScenario();
   const [isClosing, setIsClosing] = useState(false);
+  const [presetScenarios, setPresetScenarios] = useState<PresetScenario[]>([]);
+  const [showPresets, setShowPresets] = useState(false);
+
+  // Load preset scenarios on mount
+  useEffect(() => {
+    getPresetScenarios('en').then(scenarios => {
+      setPresetScenarios(scenarios);
+    });
+  }, []);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -21,6 +31,13 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
     setTimeout(() => {
       onClose();
     }, 300);
+  };
+
+  const handleApplyPreset = (preset: PresetScenario) => {
+    if (applyPresetScenario) {
+      applyPresetScenario(preset.parameters);
+      setShowPresets(false);
+    }
   };
 
   return (
@@ -36,11 +53,60 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between p-2 border-b border-border">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Global Parameters</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Adjust parameters to update all pages simultaneously
-            </p>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Global Parameters</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Adjust parameters to update all pages simultaneously
+                </p>
+              </div>
+              {presetScenarios.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowPresets(!showPresets)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-medium transition-all shadow-md"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Preset Scenarios
+                  </button>
+                  {showPresets && (
+                    <div className="absolute top-full left-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                      <div className="p-2 border-b border-border">
+                        <h3 className="font-semibold text-foreground">Quick Scenario Selection</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Load predefined parameter combinations
+                        </p>
+                      </div>
+                      <div className="p-2 space-y-2">
+                        {presetScenarios.map((preset) => (
+                          <button
+                            key={preset.id}
+                            onClick={() => handleApplyPreset(preset)}
+                            className="w-full text-left p-3 rounded-lg border-2 border-border hover:border-blue-500 hover:bg-muted transition-all group"
+                          >
+                            <div className="flex items-center gap-2">
+                              {preset.color && (
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: preset.color }}
+                                />
+                              )}
+                              <span className="font-medium text-foreground group-hover:text-blue-600">
+                                {preset.name}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {preset.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleClose}
@@ -161,13 +227,14 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
               <label className="text-sm font-medium text-foreground mb-2 block">Diet Pattern</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { value: 1, label: 'Traditional' },
-                  { value: 2, label: 'Moderate' },
-                  { value: 3, label: 'Modern' }
-                ].map(({ value, label }) => (
+                  { value: 1, label: 'Low Meat', fullLabel: 'Traditional Diet (Low Meat)' },
+                  { value: 2, label: 'Balanced', fullLabel: 'Moderate Diet (Balanced)' },
+                  { value: 3, label: 'High Protein', fullLabel: 'High Animal Protein (High Meat)' }
+                ].map(({ value, label, fullLabel }) => (
                   <button
                     key={value}
                     onClick={() => updateParameter('dietPattern', value)}
+                    title={fullLabel}
                     className={`px-3 py-2 rounded-lg border-2 transition-all text-sm ${
                       parameters.dietPattern === value
                         ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-300 font-medium'
@@ -268,7 +335,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
 
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Fire Generation Share</label>
+                <label className="text-sm font-medium text-foreground">Thermal Power Generation Share</label>
                 <button
                   onClick={() => updateParameter('fireGenerationShare', parameters.fireGenerationShare === null ? 0.15 : null)}
                   className={`px-2 py-1 rounded text-xs transition-all ${
@@ -287,7 +354,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
                 step={0.05}
                 defaultValue={parameters.fireGenerationShare || 0.15}
                 unit=""
-                description={parameters.fireGenerationShare === null ? "Any value (Multiple scenarios)" : "Target share of fire-based power generation"}
+                description={parameters.fireGenerationShare === null ? "Any value (Multiple scenarios)" : "Share of thermal (fossil fuel) power in total electricity generation"}
                 onChange={(value) => updateParameter('fireGenerationShare', value)}
                 disabled={parameters.fireGenerationShare === null}
               />

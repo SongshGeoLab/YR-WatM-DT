@@ -348,10 +348,9 @@ export default function WaterAvailabilityPage() {
                   scaleanchor: 'x',
                   scaleratio: 1
                 },
-                plot_bgcolor: 'white',
-                paper_bgcolor: 'transparent',
+                // Background colors will be set by PlotlyChart dark mode handler
                 height: 400,
-                font: { family: 'Arial, sans-serif', size: 12 },
+                font: { family: 'Inter, system-ui, sans-serif', size: 12 },
                 margin: { l: 20, r: 20, t: 50, b: 20 },
                 images: [{
                   source: '/demo.png',
@@ -391,14 +390,14 @@ export default function WaterAvailabilityPage() {
                   title: 'Year',
                   range: [2020, 2100],
                   showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)'
+                  // Grid styling will be set by PlotlyChart dark mode handler
                 },
                 yaxis: {
                   title: 'Temperature (°C)',
                   titlefont: { color: '#ef4444' },
                   tickfont: { color: '#ef4444' },
                   showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)',
+                  // Grid styling will be set by PlotlyChart dark mode handler,
                   side: 'left'
                 },
                 yaxis2: {
@@ -408,10 +407,9 @@ export default function WaterAvailabilityPage() {
                   overlaying: 'y',
                   side: 'right'
                 },
-                plot_bgcolor: 'white',
-                paper_bgcolor: 'transparent',
+                // Background colors will be set by PlotlyChart dark mode handler
                 height: 300,
-                font: { family: 'Arial, sans-serif', size: 12 },
+                font: { family: 'Inter, system-ui, sans-serif', size: 12 },
                 hovermode: 'x unified',
                 legend: {
                   orientation: 'h',
@@ -442,17 +440,16 @@ export default function WaterAvailabilityPage() {
                   title: 'Year',
                   range: [2020, 2100],
                   showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)'
+                  // Grid styling will be set by PlotlyChart dark mode handler
                 },
                 yaxis: {
                   title: 'Surface Water (×10⁸ m³)',
                   showgrid: true,
-                  gridcolor: 'rgba(187, 187, 187, 0.3)'
+                  // Grid styling will be set by PlotlyChart dark mode handler
                 },
-                plot_bgcolor: 'white',
-                paper_bgcolor: 'transparent',
+                // Background colors will be set by PlotlyChart dark mode handler
                 height: 400,
-                font: { family: 'Arial, sans-serif', size: 12 },
+                font: { family: 'Inter, system-ui, sans-serif', size: 12 },
                 hovermode: 'x unified',
                 showlegend: false
               }}

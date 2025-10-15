@@ -4,6 +4,7 @@ import { ParameterSlider } from '../ui/parameter-slider';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { Users, Droplet } from 'lucide-react';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
+import ExplanationPopover from '../ui/ExplanationPopover';
 
 /**
  * Combined Population and Domestic Water Demand Chart with Dual Y-axes
@@ -284,9 +285,9 @@ export default function DemographicsPageOptimized() {
   // Diet pattern configurations
   const dietPatterns = useMemo(() => ({
     1: {
-      name: 'Traditional',
-      title: 'Sustainable',
-      description: 'Plant-based diet with minimal meat consumption and lowest virtual water footprint',
+      name: 'Low Meat',
+      title: 'Traditional Diet',
+      description: 'Traditional diet with low meat consumption - plant-based with minimal animal protein and lowest virtual water footprint',
       color: 'bg-green-500',
       borderColor: 'border-green-500',
       hoverColor: 'hover:bg-green-50 dark:hover:bg-green-900/20',
@@ -295,9 +296,9 @@ export default function DemographicsPageOptimized() {
       waterFootprint: 'Low'
     },
     2: {
-      name: 'Moderate',
-      title: 'Balanced',
-      description: 'Balanced diet with moderate meat consumption and medium virtual water footprint',
+      name: 'Balanced',
+      title: 'Moderate Diet',
+      description: 'Moderate diet with balanced nutrition - mixed sources with medium animal protein and moderate virtual water footprint',
       color: 'bg-amber-500',
       borderColor: 'border-amber-500',
       hoverColor: 'hover:bg-amber-50 dark:hover:bg-amber-900/20',
@@ -306,9 +307,9 @@ export default function DemographicsPageOptimized() {
       waterFootprint: 'Medium'
     },
     3: {
-      name: 'Modern',
-      title: 'Intensive',
-      description: 'Meat-intensive diet with high consumption and highest virtual water footprint',
+      name: 'High Protein',
+      title: 'High Animal Protein',
+      description: 'High animal protein diet - meat-intensive with high consumption and highest virtual water footprint',
       color: 'bg-red-500',
       borderColor: 'border-red-500',
       hoverColor: 'hover:bg-red-50 dark:hover:bg-red-900/20',
@@ -415,7 +416,10 @@ export default function DemographicsPageOptimized() {
           {/* Diet Pattern Selection - Integrated with Global Parameters */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="font-medium text-foreground">Diet Pattern (Global)</label>
+              <div className="flex items-center gap-2">
+                <label className="font-medium text-foreground">Diet Pattern (Global)</label>
+                <ExplanationPopover explanationKey="diet_water_footprint" lang="en" iconSize={14} />
+              </div>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-muted-foreground cursor-help">ⓘ</span>

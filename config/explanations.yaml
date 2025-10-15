@@ -1,0 +1,335 @@
+# Explanation Content for Popover/Sidebar Help
+# Used to provide context-sensitive help throughout the application
+
+explanations:
+  # Diet water footprint explanation
+  diet_water_footprint:
+    title:
+      en: "Diet Water Footprint"
+      cn: "饮食水足迹说明"
+    content:
+      en: |
+        ## What is Diet Water Footprint?
+
+        The water footprint of food refers to the total volume of freshwater used to produce the food we eat. Different dietary patterns have significantly different water requirements:
+
+        ### Comparison by Diet Type
+
+        - **Traditional Diet (Low Meat)**: ~2,500 L/person/day
+          - Primarily plant-based with occasional meat consumption
+          - Lower water intensity due to minimal livestock water needs
+
+        - **Moderate Diet (Balanced)**: ~3,500 L/person/day
+          - Mixed diet with moderate meat and dairy consumption
+          - Represents typical modern urban dietary patterns
+
+        - **High Animal Protein (High Meat)**: ~5,000+ L/person/day
+          - High consumption of meat, dairy, and animal products
+          - Livestock requires significant water for feed production
+
+        ### Why Does This Matter?
+
+        In the Yellow River Basin, dietary shifts toward higher animal protein consumption can significantly increase total water demand, potentially exacerbating water stress, especially when combined with population growth and climate change.
+
+        ### Key Factors
+
+        - **Feed production**: Growing crops for livestock feed is water-intensive
+        - **Drinking water**: Animals require direct water consumption
+        - **Processing**: Meat processing uses additional water
+
+      cn: |
+        ## 什么是饮食水足迹？
+
+        食物的水足迹是指生产我们所吃食物所需的淡水总量。不同的饮食模式具有显著不同的用水需求：
+
+        ### 不同饮食类型对比
+
+        - **传统饮食（低肉类）**：约2,500升/人/天
+          - 以植物为主，偶尔食用肉类
+          - 由于畜牧业用水需求最小，水强度较低
+
+        - **均衡饮食（中等）**：约3,500升/人/天
+          - 混合饮食，适度肉类和乳制品消费
+          - 代表典型的现代城市饮食模式
+
+        - **高动物蛋白（高肉类）**：5,000+升/人/天
+          - 高肉类、乳制品和动物产品消费
+          - 畜牧业需要大量饲料生产用水
+
+        ### 为什么这很重要？
+
+        在黄河流域，向更高动物蛋白消费的饮食转变可能显著增加总用水需求，尤其是与人口增长和气候变化相结合时，可能加剧水资源压力。
+
+        ### 关键因素
+
+        - **饲料生产**：为牲畜种植饲料作物需要大量水资源
+        - **饮用水**：动物需要直接饮水
+        - **加工**：肉类加工需要额外用水
+
+  # Cooling water source explanation
+  cooling_water_source:
+    title:
+      en: "Cooling Water for Power Generation"
+      cn: "发电冷却水用量来源"
+    content:
+      en: |
+        ## Cooling Water in Thermal Power Generation
+
+        Thermal power plants (coal, gas, nuclear) require large volumes of water for cooling purposes. This is one of the major industrial water demands in the Yellow River Basin.
+
+        ### Why Thermal Plants Need Water
+
+        - **Steam Cycle**: Thermal plants convert water to steam to drive turbines
+        - **Condenser Cooling**: After passing through turbines, steam must be condensed back to water
+        - **Heat Dissipation**: Large quantities of cooling water are needed to remove waste heat
+
+        ### Water Usage Patterns
+
+        - **Once-through cooling**: Uses large volumes but returns most water (with higher temperature)
+        - **Recirculating systems**: Use less water but require cooling towers and have higher evaporation losses
+
+        ### Impact of Thermal Power Share
+
+        The "Thermal Power Generation Share" parameter controls what proportion of electricity comes from thermal plants:
+
+        - **Higher share (0.3-0.4)**: More cooling water needed, higher water stress
+        - **Lower share (0.1-0.2)**: Less cooling water demand, more renewable energy
+
+        ### Data Sources
+
+        Cooling water estimates are based on:
+        - Provincial power generation capacity data
+        - Typical cooling water coefficients (2-3 L/kWh for once-through, 0.5-1 L/kWh for recirculating)
+        - Seasonal variations in cooling efficiency
+
+      cn: |
+        ## 发电冷却用水
+
+        火力发电厂（煤炭、天然气、核能）需要大量水用于冷却。这是黄河流域主要的工业用水需求之一。
+
+        ### 为什么火力发电厂需要水
+
+        - **蒸汽循环**：火力发电厂将水转化为蒸汽驱动涡轮机
+        - **冷凝器冷却**：蒸汽通过涡轮机后必须冷凝回水
+        - **散热**：需要大量冷却水来去除废热
+
+        ### 用水模式
+
+        - **直流冷却**：使用大量水但返回大部分（温度较高）
+        - **循环系统**：用水量较少但需要冷却塔，蒸发损失较高
+
+        ### 火力发电占比的影响
+
+        "火力发电占比"参数控制电力来自火力发电的比例：
+
+        - **较高占比（0.3-0.4）**：需要更多冷却水，水压力更高
+        - **较低占比（0.1-0.2）**：冷却水需求减少，更多可再生能源
+
+        ### 数据来源
+
+        冷却水估算基于：
+        - 省级发电装机容量数据
+        - 典型冷却水系数（直流2-3升/千瓦时，循环0.5-1升/千瓦时）
+        - 冷却效率的季节性变化
+
+  # Irrigation efficiency explanation
+  irrigation_efficiency:
+    title:
+      en: "Water-Saving Irrigation Efficiency"
+      cn: "节水灌溉效率说明"
+    content:
+      en: |
+        ## Irrigation Efficiency and Water Conservation
+
+        Irrigation efficiency measures how much of the water applied actually reaches and benefits crops, versus being lost to evaporation, runoff, or deep percolation.
+
+        ### Efficiency Levels
+
+        - **0.8 (Traditional)**: Flood/furrow irrigation
+          - 20% water loss through evaporation and runoff
+          - Common in traditional agricultural areas
+
+        - **0.9 (Improved)**: Sprinkler systems
+          - 10% loss, more uniform distribution
+          - Moderate investment required
+
+        - **1.0 (Advanced)**: Drip/micro-irrigation
+          - Minimal losses, precise water delivery
+          - Highest efficiency but requires investment
+
+        ### Impact on Water Demand
+
+        Higher irrigation efficiency directly reduces agricultural water demand, which accounts for ~60-70% of total water use in the Yellow River Basin.
+
+        **Example**: For 100 billion m³ agricultural demand:
+        - At 0.8 efficiency: Need 125 billion m³ withdrawn
+        - At 1.0 efficiency: Need 100 billion m³ withdrawn
+        - **Savings**: 25 billion m³ (20% reduction)
+
+      cn: |
+        ## 灌溉效率与节水
+
+        灌溉效率衡量施加的水中有多少实际到达并有益于作物，而不是因蒸发、径流或深层渗透而损失。
+
+        ### 效率水平
+
+        - **0.8（传统）**：漫灌/沟灌
+          - 通过蒸发和径流损失20%的水
+          - 在传统农业区常见
+
+        - **0.9（改进）**：喷灌系统
+          - 损失10%，分布更均匀
+          - 需要适度投资
+
+        - **1.0（先进）**：滴灌/微灌
+          - 损失最小，精确供水
+          - 效率最高但需要投资
+
+        ### 对用水需求的影响
+
+        更高的灌溉效率直接减少农业用水需求，而农业用水约占黄河流域总用水量的60-70%。
+
+        **示例**：对于1000亿立方米的农业需求：
+        - 效率0.8时：需要取用1250亿立方米
+        - 效率1.0时：需要取用1000亿立方米
+        - **节水量**：250亿立方米（减少20%）
+
+  # Water stress index explanation
+  water_stress_index:
+    title:
+      en: "Water Stress Index (WSI)"
+      cn: "水压力指数说明"
+    content:
+      en: |
+        ## Understanding Water Stress Index
+
+        The Water Stress Index (WSI) is a key indicator measuring the ratio of water demand to available water supply. It helps identify potential water scarcity risks.
+
+        ### WSI Formula
+
+        $$WSI = \frac{Total\ Water\ Demand}{Available\ Water\ Supply}$$
+
+        ### Interpretation Thresholds
+
+        - **WSI < 0.4 (Safe)**: Adequate water resources
+          - Low stress, sustainable water use
+          - Green zone in our visualization
+
+        - **0.4 ≤ WSI < 0.6 (Warning)**: Moderate water stress
+          - Increasing pressure on water resources
+          - May require demand management
+          - Yellow/orange zone
+
+        - **WSI ≥ 0.6 (Critical)**: High water stress/scarcity
+          - Severe water shortage risk
+          - Urgent intervention needed
+          - Red zone
+
+        ### Critical Threshold: 0.4
+
+        The 0.4 threshold is internationally recognized as the point where water stress begins to significantly impact:
+        - Economic development
+        - Environmental health
+        - Social welfare
+
+        ### Basin Context
+
+        The Yellow River Basin historically faces water stress due to:
+        - High population density
+        - Intensive agricultural activities
+        - Limited water resources relative to demand
+        - Climate variability
+
+      cn: |
+        ## 理解水压力指数
+
+        水压力指数（WSI）是衡量用水需求与可用水供应比率的关键指标。它有助于识别潜在的水资源短缺风险。
+
+        ### WSI 公式
+
+        $$WSI = \frac{总用水需求}{可用水资源供应}$$
+
+        ### 解读阈值
+
+        - **WSI < 0.4（安全）**：水资源充足
+          - 压力低，用水可持续
+          - 可视化中的绿色区域
+
+        - **0.4 ≤ WSI < 0.6（警戒）**：中等水压力
+          - 水资源压力增加
+          - 可能需要需求管理
+          - 黄色/橙色区域
+
+        - **WSI ≥ 0.6（临界）**：高水压力/短缺
+          - 严重缺水风险
+          - 需要紧急干预
+          - 红色区域
+
+        ### 临界阈值：0.4
+
+        0.4 阈值被国际公认为水压力开始显著影响以下方面的点：
+        - 经济发展
+        - 环境健康
+        - 社会福利
+
+        ### 流域背景
+
+        黄河流域历史上面临水压力，原因包括：
+        - 人口密度高
+        - 密集的农业活动
+        - 水资源相对需求有限
+        - 气候变异性
+
+  # Ecological flow explanation
+  ecological_flow:
+    title:
+      en: "Ecological Water Flow"
+      cn: "生态流量说明"
+    content:
+      en: |
+        ## Ecological Water Flow Requirements
+
+        Ecological flow refers to the quantity, timing, and quality of water flows required to sustain freshwater ecosystems and the human livelihoods that depend on them.
+
+        ### Why It Matters
+
+        - **Ecosystem health**: Maintain aquatic habitats and biodiversity
+        - **Sediment transport**: Prevent riverbed degradation
+        - **Water quality**: Dilute pollutants naturally
+        - **Delta sustainability**: Support Yellow River Delta ecosystems
+
+        ### Flow Ratio Parameter
+
+        The ecological flow variable (0.2, 0.25, 0.3) represents the proportion of available water allocated for environmental purposes:
+
+        - **0.2 (20%)**: Minimum environmental protection
+        - **0.25 (25%)**: Moderate protection (baseline)
+        - **0.3 (30%)**: Enhanced environmental protection
+
+        ### Trade-offs
+
+        Higher ecological flows improve environmental outcomes but reduce water available for human use, potentially increasing water stress index during high-demand periods.
+
+      cn: |
+        ## 生态流量需求
+
+        生态流量是指维持淡水生态系统及其所依赖的人类生计所需的水流数量、时间和质量。
+
+        ### 为什么重要
+
+        - **生态系统健康**：维持水生栖息地和生物多样性
+        - **泥沙输送**：防止河床退化
+        - **水质**：自然稀释污染物
+        - **三角洲可持续性**：支持黄河三角洲生态系统
+
+        ### 流量比例参数
+
+        生态流量变量（0.2、0.25、0.3）代表分配给环境目的的可用水比例：
+
+        - **0.2（20%）**：最低环境保护
+        - **0.25（25%）**：适度保护（基准）
+        - **0.3（30%）**：加强环境保护
+
+        ### 权衡
+
+        更高的生态流量改善环境结果，但减少了可供人类使用的水，可能在高需求期增加水压力指数。

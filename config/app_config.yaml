@@ -1,0 +1,222 @@
+# Yellow River Basin Water Management Decision Theater
+# Application Configuration
+
+# ============================================================================
+# Terminology and Display Labels
+# ============================================================================
+terminology:
+  # Climate change scenario
+  climate_scenario:
+    internal: "Climate change scenario switch for water yield"
+    display_en: "Climate Scenario"
+    display_cn: "气候情景"
+    description_en: "Climate change impact on water resources"
+    description_cn: "气候变化对水资源的影响"
+    options:
+      1: {en: "SSP1-2.6 (Low Emissions)", cn: "SSP1-2.6（低排放）"}
+      2: {en: "SSP2-4.5 (Medium Emissions)", cn: "SSP2-4.5（中等排放）"}
+      3: {en: "SSP5-8.5 (High Emissions)", cn: "SSP5-8.5（高排放）"}
+
+  # Fertility rate
+  fertility:
+    internal: "Fertility Variation"
+    display_en: "Fertility Rate"
+    display_cn: "生育率"
+    description_en: "Total fertility rate projection"
+    description_cn: "总和生育率预测"
+    unit: "children per woman"
+    unit_cn: "人/妇女"
+
+  # Diet pattern
+  diet_pattern:
+    internal: "Diet change scenario switch"
+    display_en: "Diet Pattern"
+    display_cn: "饮食模式"
+    description_en: "Dietary structure and meat consumption pattern"
+    description_cn: "饮食结构与肉类消费模式"
+    options:
+      1: {en: "Traditional Diet (Low Meat)", cn: "传统饮食（低肉类）"}
+      2: {en: "Moderate Diet (Balanced)", cn: "均衡饮食（中等）"}
+      3: {en: "High Animal Protein (High Meat)", cn: "高动物蛋白（高肉类）"}
+
+  # Ecological water flow
+  ecological_flow:
+    internal: "Ecological water flow variable"
+    display_en: "Ecological Flow Ratio"
+    display_cn: "生态流量比例"
+    description_en: "Proportion of water allocated for ecological purposes"
+    description_cn: "用于生态保护的水资源分配比例"
+    unit: "ratio"
+    unit_cn: "比例"
+
+  # Irrigation efficiency
+  irrigation_efficiency:
+    internal: "water-saving irrigation efficiency ratio"
+    display_en: "Irrigation Efficiency"
+    display_cn: "灌溉效率"
+    description_en: "Water-saving irrigation technology efficiency"
+    description_cn: "节水灌溉技术效率"
+    unit: "ratio"
+    unit_cn: "比例"
+
+  # Thermal power generation share (formerly "fire generation")
+  thermal_power_share:
+    internal: "fire generation share province target"
+    display_en: "Thermal Power Generation Share"
+    display_cn: "火力发电占比"
+    description_en: "Share of thermal (fossil fuel) power in total electricity generation"
+    description_cn: "火力（化石燃料）发电在总发电量中的占比"
+    unit: "ratio"
+    unit_cn: "比例"
+
+# ============================================================================
+# Water Stress Index Configuration
+# ============================================================================
+water_stress_index:
+  variable_name: "YRB WSI"
+  display_en: "Water Stress Index"
+  display_cn: "水压力指数"
+
+  # Main threshold value (critical)
+  threshold: 0.4
+
+  # Threshold values (for future use)
+  thresholds:
+    critical: 0.4
+    warning: 0.6
+    safe: 0.0
+
+  # Threshold labels
+  threshold_labels:
+    critical:
+      en: "Critical Threshold (Water Scarcity)"
+      cn: "临界阈值（水资源短缺）"
+    warning:
+      en: "Warning Level (Water Stress)"
+      cn: "警戒水平（水资源压力）"
+    safe:
+      en: "Safe Level (Adequate Water)"
+      cn: "安全水平（水资源充足）"
+
+  # Allow users to adjust thresholds
+  thresholds_editable: true
+
+  # Color scheme (compatible with frontend)
+  colors:
+    low: "#4CAF50"        # Green
+    moderate: "#FFC107"   # Amber
+    high: "#F44336"       # Red
+
+  # Legacy color scheme
+  color_scheme:
+    safe: "#10b981"      # Green
+    warning: "#f59e0b"   # Yellow/Orange
+    critical: "#ef4444"  # Red
+
+  # Stress level labels (compatible with frontend)
+  labels:
+    en:
+      low: "Low Stress (<0.2)"
+      moderate: "Moderate Stress (0.2-0.4)"
+      high: "High Stress (>0.4)"
+    cn:
+      low: "低水压力 (<0.2)"
+      moderate: "中等水压力 (0.2-0.4)"
+      high: "高水压力 (>0.4)"
+
+  # Gauge chart configuration
+  gauge:
+    min: 0.0
+    max: 1.0
+    steps:
+      - range: [0.0, 0.4]
+        color: "#10b981"
+      - range: [0.4, 0.6]
+        color: "#f59e0b"
+      - range: [0.6, 1.0]
+        color: "#ef4444"
+
+# ============================================================================
+# Peak Value Annotation Configuration
+# ============================================================================
+peak_annotation:
+  enabled_by_default: true
+  show_peak: true
+  show_valley: true
+  annotation_style:
+    peak:
+      color: "#ef4444"
+      symbol: "triangle-up"
+      size: 12
+      label_position: "top"
+    valley:
+      color: "#3b82f6"
+      symbol: "triangle-down"
+      size: 12
+      label_position: "bottom"
+
+# ============================================================================
+# API Configuration
+# ============================================================================
+api:
+  base_url: "http://127.0.0.1:8000"
+  timeout: 30
+  endpoints:
+    variables: "/variables"
+    params: "/params"
+    time: "/time"
+    series: "/series"
+    series_statistics: "/series/statistics"
+    series_batch: "/series/batch"
+    resolve_scenario: "/resolve_scenario"
+    basin_geojson: "/basin/geojson"
+    climate_data: "/climate-data"
+
+# ============================================================================
+# Chart Default Configuration
+# ============================================================================
+charts:
+  default_time_range:
+    start: 2020
+    end: 2100
+
+  # Downsampling threshold (number of points)
+  downsample_threshold: 500
+
+  # Default plotly layout settings
+  plotly_defaults:
+    font_size: 12
+    margin:
+      l: 60
+      r: 30
+      t: 50
+      b: 50
+    showlegend: true
+    hovermode: "x unified"
+
+# ============================================================================
+# Performance Configuration
+# ============================================================================
+performance:
+  # Debounce delay for slider inputs (ms)
+  slider_debounce: 500
+
+  # Enable caching
+  enable_caching: true
+
+  # Cache TTL (seconds)
+  cache_ttl: 3600
+
+  # Enable batch requests
+  enable_batch_requests: true
+
+# ============================================================================
+# Feature Flags
+# ============================================================================
+features:
+  show_peak_annotations: true
+  show_explanation_popovers: true
+  enable_preset_scenarios: true
+  enable_threshold_editing: true
+  enable_scenario_comparison: true
+  enable_export: true

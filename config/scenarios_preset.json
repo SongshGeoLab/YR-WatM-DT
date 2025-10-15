@@ -1,0 +1,162 @@
+{
+  "version": "1.0",
+  "description": "Preset scenario combinations for quick switching during presentations",
+  "scenarios": [
+    {
+      "id": "baseline",
+      "name": {
+        "en": "Baseline Scenario",
+        "cn": "基准情景"
+      },
+      "description": {
+        "en": "Medium fertility, moderate diet, balanced water management policies",
+        "cn": "中等生育率、均衡饮食、平衡水资源管理政策"
+      },
+      "story": {
+        "en": "Business-as-usual scenario representing continuation of current trends and policies.",
+        "cn": "常规情景，代表当前趋势和政策的延续。"
+      },
+      "parameters": {
+        "climateScenario": 2,
+        "fertility": 1.7,
+        "dietPattern": 2,
+        "ecologicalFlow": 0.25,
+        "irrigationEfficiency": 0.9,
+        "fireGenerationShare": 0.25
+      },
+      "color": "#3b82f6",
+      "icon": "baseline"
+    },
+    {
+      "id": "optimistic",
+      "name": {
+        "en": "Optimistic Scenario",
+        "cn": "乐观情景"
+      },
+      "description": {
+        "en": "Low emissions, efficient irrigation, high ecological protection",
+        "cn": "低排放、高效灌溉、高生态保护"
+      },
+      "story": {
+        "en": "Best-case scenario with aggressive climate action, technological advancement, and strong environmental policies.",
+        "cn": "最优情景，采取积极的气候行动、技术进步和强有力的环境政策。"
+      },
+      "parameters": {
+        "climateScenario": 1,
+        "fertility": 1.6,
+        "dietPattern": 1,
+        "ecologicalFlow": 0.3,
+        "irrigationEfficiency": 1.0,
+        "fireGenerationShare": 0.1
+      },
+      "color": "#10b981",
+      "icon": "optimistic"
+    },
+    {
+      "id": "pessimistic",
+      "name": {
+        "en": "Pessimistic Scenario",
+        "cn": "悲观情景"
+      },
+      "description": {
+        "en": "High emissions, traditional practices, limited ecological protection",
+        "cn": "高排放、传统做法、有限生态保护"
+      },
+      "story": {
+        "en": "Worst-case scenario with continued high emissions, slow technological adoption, and weak environmental policies.",
+        "cn": "最差情景，持续高排放、技术采用缓慢、环境政策薄弱。"
+      },
+      "parameters": {
+        "climateScenario": 3,
+        "fertility": 1.8,
+        "dietPattern": 3,
+        "ecologicalFlow": 0.2,
+        "irrigationEfficiency": 0.8,
+        "fireGenerationShare": 0.4
+      },
+      "color": "#ef4444",
+      "icon": "pessimistic"
+    },
+    {
+      "id": "green_transition",
+      "name": {
+        "en": "Green Transition",
+        "cn": "绿色转型"
+      },
+      "description": {
+        "en": "Rapid renewable energy adoption with enhanced water conservation",
+        "cn": "快速可再生能源转型与强化水资源保护"
+      },
+      "story": {
+        "en": "Scenario focusing on rapid renewable energy transition and water-saving technologies while maintaining ecological flows.",
+        "cn": "聚焦快速可再生能源转型和节水技术，同时维持生态流量的情景。"
+      },
+      "parameters": {
+        "climateScenario": 1,
+        "fertility": 1.7,
+        "dietPattern": 2,
+        "ecologicalFlow": 0.3,
+        "irrigationEfficiency": 1.0,
+        "fireGenerationShare": 0.15
+      },
+      "color": "#059669",
+      "icon": "green"
+    },
+    {
+      "id": "high_demand",
+      "name": {
+        "en": "High Demand Pressure",
+        "cn": "高需求压力"
+      },
+      "description": {
+        "en": "Population growth and dietary shifts increase water demand",
+        "cn": "人口增长和饮食转变增加用水需求"
+      },
+      "story": {
+        "en": "Scenario with high population growth, shifting to protein-rich diets, creating significant water demand challenges.",
+        "cn": "人口高增长、向富含蛋白质饮食转变的情景，带来显著的用水需求挑战。"
+      },
+      "parameters": {
+        "climateScenario": 2,
+        "fertility": 1.8,
+        "dietPattern": 3,
+        "ecologicalFlow": 0.25,
+        "irrigationEfficiency": 0.85,
+        "fireGenerationShare": 0.3
+      },
+      "color": "#f59e0b",
+      "icon": "high_demand"
+    },
+    {
+      "id": "tech_innovation",
+      "name": {
+        "en": "Technology Innovation",
+        "cn": "技术创新"
+      },
+      "description": {
+        "en": "Advanced irrigation and water-saving technologies widely adopted",
+        "cn": "先进灌溉和节水技术广泛采用"
+      },
+      "story": {
+        "en": "Scenario emphasizing widespread adoption of cutting-edge water-saving irrigation and industrial technologies.",
+        "cn": "强调广泛采用尖端节水灌溉和工业技术的情景。"
+      },
+      "parameters": {
+        "climateScenario": 2,
+        "fertility": 1.7,
+        "dietPattern": 2,
+        "ecologicalFlow": 0.25,
+        "irrigationEfficiency": 1.0,
+        "fireGenerationShare": 0.2
+      },
+      "color": "#8b5cf6",
+      "icon": "innovation"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-10-15",
+    "last_modified": "2025-10-15",
+    "author": "WatM-DT Team",
+    "notes": "These scenarios can be edited before presentations by modifying this JSON file without code changes."
+  }
+}

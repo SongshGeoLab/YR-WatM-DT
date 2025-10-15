@@ -30,6 +30,28 @@ export interface ParameterValues {
   [key: string]: string | number | boolean;
 }
 
+export interface SeriesStatistics {
+  variable: string;
+  scenario: string;
+  year_range: {
+    start: number;
+    end: number;
+  };
+  peak: {
+    value: number;
+    year: number;
+  };
+  valley: {
+    value: number;
+    year: number;
+  };
+  mean: number;
+  std: number;
+  trend: number;
+  range: number;
+  data_points: number;
+}
+
 /**
  * Fetch available variable names (excluding TIME).
  */
@@ -109,6 +131,35 @@ export async function getSeries(
   const response = await fetch(`${API_BASE_URL}/series?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch series: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch statistics for a time series including peak and valley values.
+ *
+ * @param variable - Variable name (e.g., "YRB WSI")
+ * @param scenario - Scenario name (e.g., "sc_0")
+ * @param options - Optional year range for analysis
+ */
+export async function getSeriesStatistics(
+  variable: string,
+  scenario: string,
+  options?: {
+    start_year?: number;
+    end_year?: number;
+  }
+): Promise<SeriesStatistics> {
+  const params = new URLSearchParams({
+    variable,
+    scenario,
+    ...(options?.start_year !== undefined && { start_year: String(options.start_year) }),
+    ...(options?.end_year !== undefined && { end_year: String(options.end_year) }),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/series/statistics?${params}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch series statistics: ${response.statusText}`);
   }
   return response.json();
 }

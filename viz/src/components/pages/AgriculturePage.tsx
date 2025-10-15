@@ -1,5 +1,6 @@
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
+import ExplanationPopover from '../ui/ExplanationPopover';
 import { Sprout } from 'lucide-react';
 
 /**
@@ -35,23 +36,31 @@ export default function AgriculturePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <label className="text-sm font-medium text-foreground">
+                Water-saving Irrigation Efficiency Ratio
+              </label>
+              <ExplanationPopover explanationKey="irrigation_efficiency" lang="en" iconSize={14} />
+            </div>
+            <ParameterSlider
+              label=""
+              min={0.8}
+              max={1.0}
+              step={0.05}
+              defaultValue={0.9}
+              unit=""
+              description="Efficiency ratio of water-saving irrigation technology in agriculture"
+            />
+          </div>
           <ParameterSlider
-            label="Water-saving Irrigation Efficiency Ratio"
-            min={0.8}
-            max={1.0}
-            step={0.05}
-            defaultValue={0.9}
-            unit=""
-            description="Efficiency ratio of water-saving irrigation technology in agriculture"
-          />
-          <ParameterSlider
-            label="Fire Generation Share Province Target"
+            label="Thermal Power Generation Share"
             min={0.1}
             max={0.4}
             step={0.05}
             defaultValue={0.25}
             unit=""
-            description="Target share of fire-based power generation at provincial level"
+            description="Share of thermal (fossil fuel) power in total electricity generation at provincial level"
           />
         </div>
 

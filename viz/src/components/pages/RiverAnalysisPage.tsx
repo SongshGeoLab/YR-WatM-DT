@@ -98,22 +98,17 @@ export default function RiverAnalysisPage() {
         title: 'Drainage basin area (km²)',
         range: [10, 6200],
         showgrid: true,
-        gridcolor: 'rgba(187, 187, 187, 0.6)',
-        gridwidth: 0.75,
-        griddash: 'dot'
+        // Grid styling will be set by PlotlyChart dark mode handler
       },
       yaxis: {
         title: 'River length (km)',
         range: [1010, 6990],
         showgrid: true,
-        gridcolor: 'rgba(187, 187, 187, 0.6)',
-        gridwidth: 0.75,
-        griddash: 'dot'
+        // Grid styling will be set by PlotlyChart dark mode handler
       },
-      plot_bgcolor: 'white',
-      paper_bgcolor: 'transparent',
+      // Background colors will be set by PlotlyChart dark mode handler
       height: 700,
-      font: { family: 'Arial, sans-serif', size: 12 },
+      font: { family: 'Inter, system-ui, sans-serif', size: 12 },
       hovermode: 'closest',
       shapes: yellowRiver ? [
         {
@@ -168,22 +163,17 @@ export default function RiverAnalysisPage() {
         title: 'Drainage basin area (km²)',
         range: [10, 6200],
         showgrid: true,
-        gridcolor: 'rgba(187, 187, 187, 0.6)',
-        gridwidth: 0.75,
-        griddash: 'dot'
+        // Grid styling will be set by PlotlyChart dark mode handler
       },
       yaxis: {
         title: 'River length (km)',
         range: [1010, 6990],
         showgrid: true,
-        gridcolor: 'rgba(187, 187, 187, 0.6)',
-        gridwidth: 0.75,
-        griddash: 'dot'
+        // Grid styling will be set by PlotlyChart dark mode handler
       },
-      plot_bgcolor: 'white',
-      paper_bgcolor: 'transparent',
+      // Background colors will be set by PlotlyChart dark mode handler
       height: 700,
-      font: { family: 'Arial, sans-serif', size: 12 },
+      font: { family: 'Inter, system-ui, sans-serif', size: 12 },
       hovermode: 'closest',
       shapes: yellowRiver ? [
         {

@@ -56,6 +56,7 @@ interface ScenarioContextState {
   updateParameter: (key: keyof ScenarioParameters, value: number | null) => void;
   resetParameters: () => void;
   resolveScenarios: () => Promise<void>;
+  applyPresetScenario: (presetParams: ScenarioParameters) => void;
 }
 
 const ScenarioContext = createContext<ScenarioContextState | undefined>(undefined);
@@ -265,6 +266,14 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     setParameters(DEFAULT_PARAMETERS);
   }, []);
 
+  /**
+   * Apply preset scenario parameters
+   */
+  const applyPresetScenario = useCallback((presetParams: ScenarioParameters) => {
+    console.log('✨ Applying preset scenario:', presetParams);
+    setParameters(presetParams);
+  }, []);
+
   const contextValue: ScenarioContextState = {
     parameters,
     scenarioResult,
@@ -274,6 +283,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     updateParameter,
     resetParameters,
     resolveScenarios,
+    applyPresetScenario,
   };
 
   return (

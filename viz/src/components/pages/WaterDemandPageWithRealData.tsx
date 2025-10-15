@@ -3,6 +3,7 @@ import { Card } from '../ui/card';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
+import ExplanationPopover from '../ui/ExplanationPopover';
 
 // Dark mode detection helper
 const isDarkMode = () => {
@@ -398,23 +399,31 @@ const WaterDemandPageWithRealData: React.FC = () => {
             )}
           </div>
 
-          {/* Fire Generation Share */}
+          {/* Thermal Power Generation Share */}
           <div className="space-y-2">
             {fireGenerationShare !== null ? (
-              <ParameterSlider
-                label="Fire Generation Share (Global)"
-                min={0.1}
-                max={0.4}
-                step={0.05}
-                defaultValue={fireGenerationShare}
-                unit=""
-                description="Target share of fire-based power generation - affects all pages"
-                onChange={(v) => updateParameter('fireGenerationShare', v)}
-              />
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Thermal Power Generation Share (Global)
+                  </label>
+                  <ExplanationPopover explanationKey="cooling_water_source" lang="en" iconSize={14} />
+                </div>
+                <ParameterSlider
+                  label=""
+                  min={0.1}
+                  max={0.4}
+                  step={0.05}
+                  defaultValue={fireGenerationShare}
+                  unit=""
+                  description="Share of thermal (fossil fuel) power in total electricity generation - affects all pages"
+                  onChange={(v) => updateParameter('fireGenerationShare', v)}
+                />
+              </div>
             ) : (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  Fire Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+                  Thermal Power Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
                 </p>
                 <button
                   onClick={() => updateParameter('fireGenerationShare', 0.25)}

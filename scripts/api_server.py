@@ -16,8 +16,9 @@ Google-style docstrings are used.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import geopandas as gpd
 import pandas as pd
@@ -27,6 +28,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from src.core.config_loader import get_config_loader
+
+# Add src to path for config loader
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 DATA_PARQUET = Path("data_parquet")
 DATA_DIR = Path("data")
@@ -157,8 +163,80 @@ def root() -> dict:
             "/time",
             "/series?variable=YRB%20WSI&scenario=sc_0",
             "/basin/geojson",
+            "/config/terminology",
+            "/config/scenarios_preset",
+            "/config/explanations",
+            "/config/water_stress",
         ],
     }
+
+
+@app.get("/config/terminology")
+def get_terminology(lang: str = Query("en", regex="^(en|cn)$")) -> Dict[str, Any]:
+    """Get terminology mappings for parameter display labels.
+
+    Args:
+        lang: Language code ('en' or 'cn'). Defaults to 'en'.
+
+    Returns:
+        Dictionary mapping parameter keys to display labels and descriptions.
+    """
+    config_loader = get_config_loader()
+    return config_loader.get_terminology(lang=lang)
+
+
+@app.get("/config/scenarios_preset")
+def get_scenarios_preset(
+    lang: str = Query("en", regex="^(en|cn)$"),
+) -> List[Dict[str, Any]]:
+    """Get preset scenario configurations.
+
+    Args:
+        lang: Language code ('en' or 'cn'). Defaults to 'en'.
+
+    Returns:
+        List of preset scenarios with parameters and descriptions.
+    """
+    config_loader = get_config_loader()
+    return config_loader.get_preset_scenarios(lang=lang)
+
+
+@app.get("/config/water_stress")
+def get_water_stress_config() -> Dict[str, Any]:
+    """Get water stress index configuration including thresholds and colors.
+
+    Returns:
+        Water stress configuration dictionary.
+    """
+    config_loader = get_config_loader()
+    return config_loader.get_water_stress_config()
+
+
+@app.get("/config/explanations/{key}")
+def get_explanation(
+    key: str, lang: str = Query("en", regex="^(en|cn)$")
+) -> Dict[str, Any]:
+    """Get explanation content for a specific topic.
+
+    Args:
+        key: Explanation key (e.g., 'diet_water_footprint').
+        lang: Language code ('en' or 'cn'). Defaults to 'en'.
+
+    Returns:
+        Explanation content with title and detailed text.
+
+    Raises:
+        HTTPException: If explanation key not found.
+    """
+    config_loader = get_config_loader()
+    explanation = config_loader.get_explanation(key, lang=lang)
+
+    if explanation is None:
+        raise HTTPException(
+            status_code=404, detail=f"Explanation not found for key: {key}"
+        )
+
+    return explanation
 
 
 @app.get("/basin/geojson")
@@ -251,6 +329,93 @@ def get_series(
             "time": df.get_column("time").to_list(),
             "value": df.get_column("value").to_list(),
         },
+    }
+
+
+@app.get("/series/statistics")
+def get_series_statistics(
+    variable: str = Query(...),
+    scenario: str = Query(...),
+    start_year: int = Query(2020, ge=1900),
+    end_year: int = Query(2100, ge=1900),
+) -> Dict[str, Any]:
+    """Calculate statistics for a time series including peak and valley values.
+
+    Args:
+        variable: Variable name.
+        scenario: Scenario name.
+        start_year: Start year for analysis window. Defaults to 2020.
+        end_year: End year for analysis window. Defaults to 2100.
+
+    Returns:
+        Dictionary containing peak, valley, mean, and trend statistics.
+    """
+    # Get variable data
+    var_path = _resolve_variable_to_path(variable)
+    if not var_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"Variable parquet not found for '{variable}'"
+        )
+
+    # Load and filter data
+    df = pl.read_parquet(var_path).filter(pl.col("scenario_name") == scenario)
+    if df.height == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Scenario '{scenario}' not found for variable '{variable}'",
+        )
+
+    # Join with time and filter by year range
+    df = df.join(_read_time(), on="step", how="left").sort("step")
+    df = df.filter((pl.col("time") >= start_year) & (pl.col("time") <= end_year))
+
+    if df.height == 0:
+        raise HTTPException(
+            status_code=400, detail=f"No data in year range {start_year}-{end_year}"
+        )
+
+    # Calculate statistics
+    values = df.get_column("value")
+    times = df.get_column("time")
+
+    # Find peak (maximum)
+    peak_idx = values.arg_max()
+    peak_value = float(values[peak_idx])
+    peak_year = float(times[peak_idx])
+
+    # Find valley (minimum)
+    valley_idx = values.arg_min()
+    valley_value = float(values[valley_idx])
+    valley_year = float(times[valley_idx])
+
+    # Calculate basic statistics
+    mean_value = float(values.mean())
+    std_value = float(values.std())
+
+    # Calculate trend (simple linear trend)
+    if df.height > 1:
+        first_value = float(values[0])
+        last_value = float(values[-1])
+        time_span = float(times[-1] - times[0])
+
+        if time_span > 0:
+            trend = (last_value - first_value) / time_span  # change per year
+        else:
+            trend = 0.0
+    else:
+        trend = 0.0
+
+    return {
+        "variable": variable,
+        "scenario": scenario,
+        "year_range": {"start": start_year, "end": end_year},
+        "peak": {"value": peak_value, "year": int(peak_year)},
+        "valley": {"value": valley_value, "year": int(valley_year)},
+        "mean": mean_value,
+        "std": std_value,
+        "trend": trend,
+        "range": peak_value - valley_value,
+        "data_points": df.height,
     }
 
 

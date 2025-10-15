@@ -7,7 +7,7 @@ import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
 import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
 import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
-import WaterStressPageWithGlobalParams from './components/pages/WaterStressPageWithGlobalParams';
+import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
 import AgriculturePage from './components/pages/AgriculturePage';
 import RiverAnalysisPage from './components/pages/RiverAnalysisPage';
 
@@ -60,7 +60,7 @@ function AppInner() {
     { name: 'Demographics', icon: Users, color: 'purple' },
     { name: 'Ecological Water', icon: TreePine, color: 'green' },
     { name: 'Agriculture', icon: Sprout, color: 'orange' },
-    { name: 'Water Stress', icon: Gauge, color: 'red' },
+    { name: 'WSI Focus', icon: Gauge, color: 'red' },
     { name: 'Water Quality', icon: Activity, color: 'indigo' }
   ];
 
@@ -71,7 +71,7 @@ function AppInner() {
       case 2: return <DemographicsPageOptimized />;
       case 3: return <EcologicalWaterPageSlider />;
       case 4: return <WaterDemandPageWithRealData />;
-      case 5: return <WaterStressPageWithGlobalParams />;
+      case 5: return <WaterStressIndexPage />;
       case 6: return <RiverAnalysisPage />;
       default: return <StudyAreaPage />;
     }
