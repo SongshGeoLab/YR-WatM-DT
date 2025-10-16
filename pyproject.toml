@@ -5,6 +5,8 @@ description = "Water Management Decision Theater"
 authors = ["SongshGeo <songshgeo@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/SongshGeoLab/YR-WatM-DT"
+homepage = "https://github.com/SongshGeoLab/YR-WatM-DT"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
