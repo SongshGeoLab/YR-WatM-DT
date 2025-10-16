@@ -485,3 +485,9 @@ Maintained by SongshGeo <songshgeo@gmail.com>
 Project Repository: https://github.com/SongshGeoLab/YR-WatM-DT
 
 For issues or questions, please visit the repository or open an issue.
+
+---
+
+## Project Policies
+
+- Branch protection and release workflow: docs/BRANCH_PROTECTION_AND_RELEASE.md
