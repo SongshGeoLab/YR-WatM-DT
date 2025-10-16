@@ -482,4 +482,6 @@ MIT
 
 Maintained by SongshGeo <songshgeo@gmail.com>
 
-For issues or questions, see project repository or open an issue.
+Project Repository: https://github.com/SongshGeoLab/YR-WatM-DT
+
+For issues or questions, please visit the repository or open an issue.

@@ -3,6 +3,11 @@
   "name": "数据可视化网页原型",
   "version": "0.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SongshGeoLab/YR-WatM-DT.git"
+  },
+  "homepage": "https://github.com/SongshGeoLab/YR-WatM-DT",
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
