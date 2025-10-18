@@ -1,14 +1,32 @@
 """FastAPI server exposing Parquet-backed data endpoints for visualization.
 
-Endpoints
+Core Endpoints:
     GET  /variables                 -> list of variable names (excluding TIME)
     GET  /params                    -> mapping of parameter name -> unique values
     POST /resolve_scenario          -> resolve scenario_name from parameter values
     GET  /time                      -> time vector [{step, time}, ...]
-    GET  /series                    -> variable series for scenario (optional window)
+    GET  /series                    -> variable series for single scenario (optional window)
+    GET  /series/multi              -> variable series for multiple scenarios with "Any" logic (NEW)
+    GET  /series/statistics         -> peak/valley/trend statistics for time series
 
-Run
-    poetry run uvicorn scripts.api_server:app --host 0.0.0.0 --port 8000
+Configuration Endpoints:
+    GET  /config/terminology        -> parameter display labels
+    GET  /config/scenarios_preset   -> predefined scenario combinations
+    GET  /config/water_stress       -> water stress thresholds
+    GET  /config/explanations/{key} -> explanation content
+
+Data Endpoints:
+    GET  /climate-data              -> RCP scenario climate data
+    GET  /yellow-river-basin        -> basin boundary GeoJSON
+    GET  /basin/geojson             -> basin boundary GeoJSON (alias)
+    GET  /page5-data                -> water demand analysis
+
+Run:
+    make dev                        -> full-stack dev server (recommended)
+    poetry run uvicorn scripts.api_server:app --host 0.0.0.0 --port 8000 --reload
+
+API Docs:
+    http://127.0.0.1:8000/docs      -> interactive API documentation
 
 Google-style docstrings are used.
 """
@@ -162,11 +180,16 @@ def root() -> dict:
             "/resolve_scenario",
             "/time",
             "/series?variable=YRB%20WSI&scenario=sc_0",
+            '/series/multi?variable=YRB%20WSI&filters={"Climate change scenario switch for water yield": 2}&aggregate=true',
+            "/series/statistics?variable=YRB%20WSI&scenario=sc_0",
             "/basin/geojson",
             "/config/terminology",
             "/config/scenarios_preset",
             "/config/explanations",
             "/config/water_stress",
+            "/page5-data",
+            "/climate-data",
+            "/yellow-river-basin",
         ],
     }
 
@@ -330,6 +353,204 @@ def get_series(
             "value": df.get_column("value").to_list(),
         },
     }
+
+
+@app.get("/series/multi")
+def get_series_multi(
+    variable: str = Query(..., description="Variable name to query"),
+    filters: str = Query(
+        ...,
+        description="JSON string with parameter filters. Supports lists for 'Any' logic, e.g. '{\"Fertility Variation\": [1.6, 1.7], \"Climate change scenario switch for water yield\": 2}'",
+    ),
+    start_year: Optional[int] = Query(
+        None, ge=1900, description="Start year for time window"
+    ),
+    end_year: Optional[int] = Query(
+        None, ge=1900, description="End year for time window"
+    ),
+    aggregate: bool = Query(
+        True,
+        description="If True, return aggregated statistics (mean, CI); if False, return all scenario data separately",
+    ),
+) -> Dict[str, Any]:
+    """Get time series for multiple scenarios matching flexible parameter filters.
+
+    This endpoint supports the 'Any' logic for parameters - you can specify:
+    - Single value: exact match (e.g., {"Fertility Variation": 1.6})
+    - List of values: match any (e.g., {"Climate scenario": [1, 2, 3]})
+    - Omit parameter: no constraint on that parameter
+
+    Args:
+        variable: Variable name to retrieve.
+        filters: JSON string mapping parameter names to values or lists.
+        start_year: Optional start year to filter time series.
+        end_year: Optional end year to filter time series.
+        aggregate: If True, return mean/CI/min/max across scenarios; if False, return raw data for each scenario.
+
+    Returns:
+        If aggregate=True:
+            {
+                "variable": str,
+                "n_scenarios": int,
+                "filter_summary": {...},
+                "series": {
+                    "time": [...],
+                    "mean": [...],
+                    "std": [...],
+                    "ci_lower": [...],
+                    "ci_upper": [...],
+                    "min": [...],
+                    "max": [...]
+                }
+            }
+        If aggregate=False:
+            {
+                "variable": str,
+                "n_scenarios": int,
+                "scenarios": [
+                    {"scenario_name": "sc_0", "parameters": {...}, "series": {"time": [...], "value": [...]}},
+                    ...
+                ]
+            }
+    """
+    try:
+        from scripts.query_scenarios import ScenarioQuery
+
+        query = ScenarioQuery(DATA_PARQUET)
+
+        # Parse filters from JSON string
+        try:
+            filter_dict = json.loads(filters)
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid JSON in filters parameter: {str(e)}",
+            )
+
+        # Build time range
+        time_range = None
+        if start_year is not None and end_year is not None:
+            time_range = (start_year, end_year)
+        elif start_year is not None:
+            time_range = (start_year, 2100)  # Default upper bound
+        elif end_year is not None:
+            time_range = (2020, end_year)  # Default lower bound
+
+        # Query data using ScenarioQuery
+        data = query.get_series(
+            variables=variable,
+            filters=filter_dict,
+            time_range=time_range,
+            include_params=True,
+        )
+
+        if data.height == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No scenarios found matching filters: {filter_dict}",
+            )
+
+        n_scenarios = data["scenario_name"].n_unique()
+
+        # Get parameter columns for metadata
+        param_cols = [
+            c
+            for c in data.columns
+            if c not in ["scenario_name", "step", "time", "value", "variable"]
+        ]
+
+        if aggregate:
+            # Aggregate across multiple scenarios
+            stats = (
+                data.group_by(["step", "time"])
+                .agg(
+                    [
+                        pl.col("value").mean().alias("mean"),
+                        pl.col("value").std().alias("std"),
+                        pl.col("value").min().alias("min"),
+                        pl.col("value").max().alias("max"),
+                        pl.col("value").quantile(0.05).alias("p05"),
+                        pl.col("value").quantile(0.95).alias("p95"),
+                        pl.col("scenario_name").n_unique().alias("n_scenarios"),
+                    ]
+                )
+                .with_columns(
+                    [
+                        (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
+                        (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper"),
+                    ]
+                )
+                .sort("step")
+            )
+
+            # Build filter summary showing what values were actually matched
+            filter_summary = {}
+            for param in param_cols:
+                unique_vals = data[param].unique().sort().to_list()
+                filter_summary[param] = {
+                    "requested": filter_dict.get(param, "any"),
+                    "matched": (
+                        unique_vals
+                        if len(unique_vals) <= 10
+                        else f"{len(unique_vals)} values"
+                    ),
+                }
+
+            return {
+                "variable": variable,
+                "n_scenarios": int(n_scenarios),
+                "filter_summary": filter_summary,
+                "series": {
+                    "time": stats["time"].to_list(),
+                    "mean": stats["mean"].to_list(),
+                    "std": stats["std"].to_list(),
+                    "ci_lower": stats["ci_lower"].to_list(),
+                    "ci_upper": stats["ci_upper"].to_list(),
+                    "min": stats["min"].to_list(),
+                    "max": stats["max"].to_list(),
+                    "p05": stats["p05"].to_list(),
+                    "p95": stats["p95"].to_list(),
+                },
+            }
+        else:
+            # Return all scenarios separately
+            scenarios = []
+            for scenario_name in data["scenario_name"].unique().to_list():
+                scenario_data = data.filter(
+                    pl.col("scenario_name") == scenario_name
+                ).sort("step")
+
+                # Extract parameter values for this scenario
+                params = {}
+                if scenario_data.height > 0:
+                    for param in param_cols:
+                        params[param] = scenario_data[param][0]
+
+                scenarios.append(
+                    {
+                        "scenario_name": scenario_name,
+                        "parameters": params,
+                        "series": {
+                            "time": scenario_data["time"].to_list(),
+                            "value": scenario_data["value"].to_list(),
+                        },
+                    }
+                )
+
+            return {
+                "variable": variable,
+                "n_scenarios": len(scenarios),
+                "scenarios": scenarios,
+            }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error querying multi-scenario data: {str(e)}"
+        )
 
 
 @app.get("/series/statistics")

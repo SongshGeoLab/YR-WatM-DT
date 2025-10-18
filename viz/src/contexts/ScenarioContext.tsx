@@ -350,50 +350,60 @@ export function useScenarioSeries(
             console.log(`✅ Loaded ${variable}: ${result.series.value.length} data points`);
           }
         } else {
-          // Multiple scenarios - try to fetch from a representative scenario
-          console.log(`📊 Fetching ${variable} for multiple scenarios (using representative scenario)...`);
+          // Multiple scenarios - use new /series/multi API
+          console.log(`📊 Fetching ${variable} for multiple scenarios using /series/multi API...`);
 
           try {
-            // Use current non-null parameters for representative scenario
-            // Replace null values with reasonable defaults for the representative scenario
-            const representativeParams = {
-              "Climate change scenario switch for water yield": parameters.climateScenario || 2,
-              "Fertility Variation": parameters.fertility || 1.7,
-              "Diet change scenario switch": parameters.dietPattern || 2,
-              "Ecological water flow variable": parameters.ecologicalFlow || 0.25,
-              "water-saving irrigation efficiency ratio": parameters.irrigationEfficiency || 0.85,
-              "fire generation share province target": parameters.fireGenerationShare || 0.15
+            // Convert parameters to API filters (omit null values for "Any" logic)
+            const filters = api.parametersToFilters(parameters);
+
+            console.log(`🔍 Querying with filters:`, filters);
+            console.log(`📊 Expected to match ~${scenarioResult.count} scenarios`);
+
+            // Convert step options to year options if provided
+            const yearOptions: { start_year?: number; end_year?: number; aggregate: boolean } = {
+              aggregate: true,
             };
 
-            console.log('🔍 Using representative parameters:', representativeParams);
+            if (options?.start_step !== undefined) {
+              yearOptions.start_year = 2020 + options.start_step;
+            }
+            if (options?.end_step !== undefined) {
+              yearOptions.end_year = 2020 + options.end_step;
+            }
 
-            const representativeScenario = await api.resolveScenario(representativeParams);
+            // Fetch multi-scenario aggregated data
+            const multiResult = await api.getSeriesMulti(variable, filters, yearOptions);
 
-            const result = await api.getSeries(variable, representativeScenario.scenario_name, options);
-
-            if (!cancelled) {
-              // Add some variance to simulate confidence intervals
-              const series = result.series;
-              const mean = series.value;
-              const variance = mean.map(val => val * 0.1); // 10% variance
-
+            if (!cancelled && 'series' in multiResult) {
+              // Transform to match expected format
               const enhancedResult = {
                 series: {
-                  ...series,
-                  mean: mean,
-                  ci_lower: mean.map((val, i) => val - variance[i]),
-                  ci_upper: mean.map((val, i) => val + variance[i]),
-                  n_scenarios: scenarioResult.count || 1
-                }
+                  time: multiResult.series.time,
+                  value: multiResult.series.mean, // Use mean as primary value
+                  mean: multiResult.series.mean,
+                  ci_lower: multiResult.series.ci_lower,
+                  ci_upper: multiResult.series.ci_upper,
+                  min: multiResult.series.min,
+                  max: multiResult.series.max,
+                  std: multiResult.series.std,
+                  p05: multiResult.series.p05,
+                  p95: multiResult.series.p95,
+                  n_scenarios: multiResult.n_scenarios
+                },
+                filter_summary: multiResult.filter_summary
               };
 
               setData(enhancedResult);
-              console.log(`✅ Loaded ${variable} with simulated confidence intervals: ${enhancedResult.series.value.length} data points`);
+              console.log(`✅ Loaded ${variable} with real multi-scenario data:`);
+              console.log(`   - ${multiResult.n_scenarios} scenarios matched`);
+              console.log(`   - ${multiResult.series.time.length} time points`);
+              console.log(`   - Mean range: ${Math.min(...multiResult.series.mean).toFixed(2)} - ${Math.max(...multiResult.series.mean).toFixed(2)}`);
             }
-          } catch (err) {
-            console.log(`⚠️ Failed to fetch representative scenario data, using fallback`);
+          } catch (err: any) {
+            console.error(`❌ Failed to fetch multi-scenario data:`, err);
 
-            // Fallback to demo data if representative scenario fails
+            // Fallback to demo data if API fails
             const demoResult = {
               series: {
                 time: Array.from({ length: 81 }, (_, i) => 2020 + i),
@@ -407,7 +417,7 @@ export function useScenarioSeries(
 
             if (!cancelled) {
               setData(demoResult);
-              console.log(`✅ Loaded ${variable} with demo confidence intervals: ${demoResult.series.value.length} data points`);
+              console.log(`⚠️ Using fallback demo data due to error: ${err.message}`);
             }
           }
         }

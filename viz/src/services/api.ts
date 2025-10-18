@@ -240,3 +240,124 @@ export async function getYellowRiverBasin(): Promise<YellowRiverBasinData> {
   }
   return response.json();
 }
+
+/**
+ * Multi-scenario query interfaces (new /series/multi endpoint)
+ */
+
+export interface MultiSeriesFilters {
+  [parameterName: string]: number | number[];
+}
+
+export interface FilterSummary {
+  requested: number | number[] | 'any';
+  matched: number[] | string;
+}
+
+export interface MultiSeriesAggregateResponse {
+  variable: string;
+  n_scenarios: number;
+  filter_summary: Record<string, FilterSummary>;
+  series: {
+    time: number[];
+    mean: number[];
+    std: number[];
+    ci_lower: number[];
+    ci_upper: number[];
+    min: number[];
+    max: number[];
+    p05: number[];
+    p95: number[];
+  };
+}
+
+export interface ScenarioWithData {
+  scenario_name: string;
+  parameters: Record<string, number>;
+  series: {
+    time: number[];
+    value: number[];
+  };
+}
+
+export interface MultiSeriesRawResponse {
+  variable: string;
+  n_scenarios: number;
+  scenarios: ScenarioWithData[];
+}
+
+/**
+ * Fetch time series data for multiple scenarios matching flexible parameter filters.
+ *
+ * This endpoint supports the "Any" logic:
+ * - Single value: exact match
+ * - Array of values: match any value in the array
+ * - Omit parameter: no constraint (matches all values)
+ *
+ * @param variable - Variable name to query
+ * @param filters - Parameter filters (supports single values or arrays)
+ * @param options - Query options
+ * @returns Multi-scenario data (aggregated or raw depending on aggregate flag)
+ */
+export async function getSeriesMulti(
+  variable: string,
+  filters: MultiSeriesFilters,
+  options?: {
+    start_year?: number;
+    end_year?: number;
+    aggregate?: boolean;
+  }
+): Promise<MultiSeriesAggregateResponse | MultiSeriesRawResponse> {
+  const params = new URLSearchParams({
+    variable,
+    filters: JSON.stringify(filters),
+    ...(options?.start_year !== undefined && { start_year: String(options.start_year) }),
+    ...(options?.end_year !== undefined && { end_year: String(options.end_year) }),
+    ...(options?.aggregate !== undefined && { aggregate: String(options.aggregate) }),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/series/multi?${params}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch multi-scenario series: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Helper function to convert ScenarioParameters to API filters.
+ * Omits null values (which represent "Any" in the frontend).
+ *
+ * @param parameters - Frontend parameter state
+ * @returns API-compatible filter object
+ */
+export function parametersToFilters(parameters: {
+  climateScenario: number | null;
+  fertility: number | null;
+  dietPattern: number | null;
+  ecologicalFlow: number | null;
+  irrigationEfficiency: number | null;
+  fireGenerationShare: number | null;
+}): MultiSeriesFilters {
+  const filters: MultiSeriesFilters = {};
+
+  if (parameters.climateScenario !== null) {
+    filters['Climate change scenario switch for water yield'] = parameters.climateScenario;
+  }
+  if (parameters.fertility !== null) {
+    filters['Fertility Variation'] = parameters.fertility;
+  }
+  if (parameters.dietPattern !== null) {
+    filters['Diet change scenario switch'] = parameters.dietPattern;
+  }
+  if (parameters.ecologicalFlow !== null) {
+    filters['Ecological water flow variable'] = parameters.ecologicalFlow;
+  }
+  if (parameters.irrigationEfficiency !== null) {
+    filters['water-saving irrigation efficiency ratio'] = parameters.irrigationEfficiency;
+  }
+  if (parameters.fireGenerationShare !== null) {
+    filters['fire generation share province target'] = parameters.fireGenerationShare;
+  }
+
+  return filters;
+}

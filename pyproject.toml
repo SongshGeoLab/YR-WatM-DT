@@ -41,6 +41,7 @@ snakeviz = ">=2.2.0"
 pytest-mpl = ">=0.17.0"
 questionary = "~2"
 types-pyyaml = "^6.0.12.20250915"
+types-requests = "^2.32.4.20250913"
 
 
 [tool.poetry.group.docs.dependencies]
