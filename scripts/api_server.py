@@ -6,8 +6,11 @@ Core Endpoints:
     POST /resolve_scenario          -> resolve scenario_name from parameter values
     GET  /time                      -> time vector [{step, time}, ...]
     GET  /series                    -> variable series for single scenario (optional window)
-    GET  /series/multi              -> variable series for multiple scenarios with "Any" logic (NEW)
+    GET  /series/multi              -> variable series for multiple scenarios with "Any" logic
     GET  /series/statistics         -> peak/valley/trend statistics for time series
+
+Analysis Endpoints:
+    GET  /analysis/sensitivity      -> sensitivity analysis for parameter impacts (NEW)
 
 Configuration Endpoints:
     GET  /config/terminology        -> parameter display labels
@@ -182,6 +185,7 @@ def root() -> dict:
             "/series?variable=YRB%20WSI&scenario=sc_0",
             '/series/multi?variable=YRB%20WSI&filters={"Climate change scenario switch for water yield": 2}&aggregate=true',
             "/series/statistics?variable=YRB%20WSI&scenario=sc_0",
+            "/analysis/sensitivity?vary_param=Fertility%20Variation&metric=cv&top_n=10",
             "/basin/geojson",
             "/config/terminology",
             "/config/scenarios_preset",
@@ -925,4 +929,144 @@ async def get_yellow_river_basin():
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error loading Yellow River Basin data: {str(e)}"
+        )
+
+
+@app.get("/analysis/sensitivity")
+def analyze_sensitivity(
+    vary_param: str = Query(
+        ..., description="Parameter name to vary (e.g., 'Fertility Variation')"
+    ),
+    fixed_params: Optional[str] = Query(
+        None,
+        description="JSON string of fixed parameters, e.g. '{\"Climate change scenario switch for water yield\": 2}'",
+    ),
+    variables: Optional[str] = Query(
+        None,
+        description="JSON array of variables to test. If None, tests all variables.",
+    ),
+    start_year: Optional[int] = Query(
+        None, ge=1900, description="Start year for analysis"
+    ),
+    end_year: Optional[int] = Query(None, ge=1900, description="End year for analysis"),
+    metric: str = Query(
+        "cv",
+        regex="^(cv|range|range_pct|std|iqr)$",
+        description="Sensitivity metric: cv, range, range_pct, std, or iqr",
+    ),
+    top_n: Optional[int] = Query(None, ge=1, description="Return only top N results"),
+) -> Dict[str, Any]:
+    """Test sensitivity of variables to parameter changes.
+
+    Analyzes how changing one parameter affects different variables,
+    while optionally fixing other parameters. Returns variables ranked
+    by their sensitivity to the varying parameter.
+
+    Args:
+        vary_param: Parameter to vary.
+        fixed_params: Optional JSON string of fixed parameters.
+        variables: Optional JSON array of variables to test.
+        start_year: Optional start year.
+        end_year: Optional end year.
+        metric: Sensitivity metric (cv, range, range_pct, std, iqr).
+        top_n: Return only top N most sensitive variables.
+
+    Returns:
+        {
+            "vary_param": str,
+            "vary_values": [...],
+            "fixed_params": {...},
+            "metric": str,
+            "results": [
+                {
+                    "variable": str,
+                    "sensitivity": float,
+                    "mean_value": float,
+                    "std_value": float,
+                    "min_value": float,
+                    "max_value": float,
+                    "range_value": float,
+                    "cv": float,
+                    "n_scenarios": int
+                },
+                ...
+            ]
+        }
+
+    Example:
+        GET /analysis/sensitivity?vary_param=Fertility%20Variation&\
+fixed_params={"Climate%20change%20scenario%20switch%20for%20water%20yield":2}&\
+metric=cv&top_n=10
+    """
+    try:
+        from scripts.analysis_helpers import sensitivity_test
+        from scripts.query_scenarios import ScenarioQuery
+
+        query_engine = ScenarioQuery(DATA_PARQUET)
+
+        # Parse fixed parameters
+        fixed_params_dict = None
+        if fixed_params:
+            try:
+                fixed_params_dict = json.loads(fixed_params)
+            except json.JSONDecodeError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid JSON in fixed_params: {str(e)}",
+                )
+
+        # Parse variables list
+        variables_list = None
+        if variables:
+            try:
+                variables_list = json.loads(variables)
+            except json.JSONDecodeError as e:
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid JSON in variables: {str(e)}"
+                )
+
+        # Build time range
+        time_range = None
+        if start_year is not None and end_year is not None:
+            time_range = (start_year, end_year)
+        elif start_year is not None:
+            time_range = (start_year, 2100)
+        elif end_year is not None:
+            time_range = (2020, end_year)
+
+        # Run sensitivity test
+        results_df = sensitivity_test(
+            query_engine,
+            vary_param=vary_param,
+            fixed_params=fixed_params_dict,
+            variables=variables_list,
+            time_range=time_range,
+            metric=metric,
+        )
+
+        # Limit to top N if requested
+        if top_n is not None:
+            results_df = results_df.head(top_n)
+
+        # Get vary parameter values
+        vary_values = query_engine.scenarios[vary_param].unique().sort().to_list()
+
+        return {
+            "vary_param": vary_param,
+            "vary_values": vary_values,
+            "fixed_params": fixed_params_dict or {},
+            "metric": metric,
+            "time_range": {
+                "start": start_year or 2020,
+                "end": end_year or 2100,
+            },
+            "n_variables": results_df.height,
+            "results": results_df.to_dicts(),
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error in sensitivity analysis: {str(e)}"
         )

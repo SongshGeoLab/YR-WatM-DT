@@ -147,4 +147,3 @@ viz/.turbo/
 viz/.env.local
 viz/.env.*.local
 backup_*/
-reports/
