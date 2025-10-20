@@ -161,7 +161,7 @@ app = FastAPI(title="Decision Theater API", version="0.1.0")
 # Allow local dev frontends (Dash, Vite, etc.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*", "http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -317,8 +317,14 @@ def resolve_scenario(body: ResolveRequest) -> Dict[str, str]:
         raise HTTPException(
             status_code=404, detail="No scenario matches the selected parameters"
         )
-    scenario_name = matched.get_column("scenario_name").item()
-    return {"scenario_name": scenario_name}
+    elif matched.height == 1:
+        scenario_name = matched.get_column("scenario_name").item()
+        return {"scenario_name": scenario_name}
+    else:
+        # Multiple scenarios match (e.g., with and without SNWTP) - return the first one
+        # This is for backward compatibility with frontend that expects a single scenario
+        scenario_name = matched.get_column("scenario_name").item(0)
+        return {"scenario_name": scenario_name}
 
 
 @app.get("/time")

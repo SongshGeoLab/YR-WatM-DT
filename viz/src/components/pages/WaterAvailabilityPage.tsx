@@ -15,12 +15,90 @@ export default function WaterAvailabilityPage() {
   const [climateData, setClimateData] = useState<api.ClimateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // South-North Water Transfer Project toggle (local state, not global)
+  const [snwtpEnabled, setSnwtpEnabled] = useState(false);
 
-  // Get real surface water data using the global scenario context
-  const { data: surfaceWaterData, loading: surfaceWaterLoading, error: surfaceWaterError } = useScenarioSeries(
-    'YRB available surface water',
-    { start_step: 39, end_step: 1904 } // 2020-2100 (1981+39=2020, 1981+1904=2100)
-  );
+  // Get real surface water data with SNWTP parameter
+  const [surfaceWaterData, setSurfaceWaterData] = useState<any>(null);
+  const [surfaceWaterLoading, setSurfaceWaterLoading] = useState(false);
+  const [surfaceWaterError, setSurfaceWaterError] = useState<string | null>(null);
+
+  // Custom data fetching for surface water with SNWTP parameter
+  useEffect(() => {
+    const fetchSurfaceWaterData = async () => {
+      setSurfaceWaterLoading(true);
+      setSurfaceWaterError(null);
+
+      try {
+        // Build filters including SNWTP parameter
+        const filters: any = {};
+        
+        // Add global parameters
+        Object.entries(parameters).forEach(([key, value]) => {
+          if (value !== null) {
+            const apiKey = key === 'climateScenario' ? 'Climate change scenario switch for water yield' :
+                          key === 'fertility' ? 'Fertility Variation' :
+                          key === 'dietPattern' ? 'Diet change scenario switch' :
+                          key === 'ecologicalFlow' ? 'Ecological water flow variable' :
+                          key === 'irrigationEfficiency' ? 'water saving irrigation efficiency ratio' :
+                          key === 'fireGenerationShare' ? 'fire generation share province target' :
+                          key;
+            filters[apiKey] = value;
+          }
+        });
+
+        // Add SNWTP parameter
+        filters['SNWTP'] = snwtpEnabled ? 1 : 0;
+
+        console.log('🔍 Fetching surface water data with filters:', filters);
+        console.log('🔍 SNWTP enabled:', snwtpEnabled);
+
+        // Call API directly
+        const result = await api.getSeriesMulti(
+          'YRB available surface water',
+          filters,
+          {
+            start_year: 2020,
+            end_year: 2100,
+            aggregate: true
+          }
+        );
+
+        if ('series' in result) {
+          const enhancedResult = {
+            series: {
+              time: result.series.time,
+              value: result.series.mean,
+              mean: result.series.mean,
+              ci_lower: result.series.ci_lower,
+              ci_upper: result.series.ci_upper,
+              min: result.series.min,
+              max: result.series.max,
+              std: result.series.std,
+              p05: result.series.p05,
+              p95: result.series.p95,
+              n_scenarios: result.n_scenarios
+            },
+            filter_summary: result.filter_summary
+          };
+          setSurfaceWaterData(enhancedResult);
+          console.log('✅ Surface water data loaded:', {
+            n_scenarios: result.n_scenarios,
+            time_points: result.series.time.length,
+            snwtp_enabled: snwtpEnabled
+          });
+        }
+      } catch (err: any) {
+        console.error('❌ Failed to fetch surface water data:', err);
+        setSurfaceWaterError(err.message);
+      } finally {
+        setSurfaceWaterLoading(false);
+      }
+    };
+
+    fetchSurfaceWaterData();
+  }, [parameters, snwtpEnabled]);
 
   // Derive selected scenario from global parameters
   const selectedScenario = useMemo(() => {
@@ -244,22 +322,24 @@ export default function WaterAvailabilityPage() {
 
     // Main data line - 根据情景模式选择显示内容
     const mainValue = scenarioResult && scenarioResult.isSingleScenario ? series.value : (series.mean || series.value);
-    const displayName = scenarioResult && scenarioResult.isSingleScenario
-      ? scenarioResult.primaryScenario || 'Current Scenario'
-      : `Mean (${series.n_scenarios || scenarioResult?.count || '?'} scenarios)`;
+    
+    const snwtpLabel = snwtpEnabled ? ' (with SNWTP)' : ' (no SNWTP)';
+    const displayName = scenarioResult && scenarioResult.isSingleScenario 
+      ? (scenarioResult.primaryScenario || 'Current Scenario') + snwtpLabel
+      : `Mean (${series.n_scenarios || scenarioResult?.count || '?'} scenarios)${snwtpLabel}`;
 
     traces.push({
       x: series.time,
       y: mainValue,
       type: 'scatter',
       mode: 'lines',
-      line: { color: '#06b6d4', width: 3 },
+      line: { color: snwtpEnabled ? '#10b981' : '#06b6d4', width: 3 },
       name: displayName,
       hovertemplate: '<b>Surface Water Availability</b><br>Year: %{x}<br>Value: %{y:.2f} ×10⁸ m³<extra></extra>'
     });
 
     return traces;
-  }, [surfaceWaterData, scenarioResult]);
+  }, [surfaceWaterData, scenarioResult, snwtpEnabled]);
 
   // Show loading state
   if (loading || surfaceWaterLoading) {
@@ -338,7 +418,34 @@ export default function WaterAvailabilityPage() {
             ))}
           </div>
         </div>
-              </div>
+        
+        {/* South-North Water Transfer Project Toggle */}
+        <div className="flex items-center gap-3">
+          <h3 className="font-semibold text-foreground">South-North Water Transfer:</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSnwtpEnabled(false)}
+              className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                !snwtpEnabled
+                  ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 font-medium'
+                  : 'bg-card border-border text-foreground hover:bg-muted'
+              }`}
+            >
+              Off
+            </button>
+            <button
+              onClick={() => setSnwtpEnabled(true)}
+              className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                snwtpEnabled
+                  ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300 font-medium'
+                  : 'bg-card border-border text-foreground hover:bg-muted'
+              }`}
+            >
+              On
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-2 gap-4 h-[calc(100%-12rem)]">

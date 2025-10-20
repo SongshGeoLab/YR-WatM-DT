@@ -81,7 +81,7 @@ const PARAMETER_MAPPING: Record<keyof ScenarioParameters, string> = {
   fertility: 'Fertility Variation',
   dietPattern: 'Diet change scenario switch',
   ecologicalFlow: 'Ecological water flow variable',
-  irrigationEfficiency: 'water-saving irrigation efficiency ratio',
+  irrigationEfficiency: 'water saving irrigation efficiency ratio',
   fireGenerationShare: 'fire generation share province target',
 };
 
