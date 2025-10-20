@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { CloudRain } from 'lucide-react';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
+import { useClimateComparison } from '../../hooks/useClimateComparison';
+import DataComparisonPanel from '../DataComparisonPanel';
 import * as api from '../../services/api';
 
 /**
@@ -15,9 +17,12 @@ export default function WaterAvailabilityPage() {
   const [climateData, setClimateData] = useState<api.ClimateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // South-North Water Transfer Project toggle (local state, not global)
   const [snwtpEnabled, setSnwtpEnabled] = useState(false);
+
+  // Get climate comparison data
+  const comparisonData = useClimateComparison(snwtpEnabled);
 
   // Get real surface water data with SNWTP parameter
   const [surfaceWaterData, setSurfaceWaterData] = useState<any>(null);
@@ -33,7 +38,7 @@ export default function WaterAvailabilityPage() {
       try {
         // Build filters including SNWTP parameter
         const filters: any = {};
-        
+
         // Add global parameters
         Object.entries(parameters).forEach(([key, value]) => {
           if (value !== null) {
@@ -71,8 +76,6 @@ export default function WaterAvailabilityPage() {
               time: result.series.time,
               value: result.series.mean,
               mean: result.series.mean,
-              ci_lower: result.series.ci_lower,
-              ci_upper: result.series.ci_upper,
               min: result.series.min,
               max: result.series.max,
               std: result.series.std,
@@ -80,7 +83,9 @@ export default function WaterAvailabilityPage() {
               p95: result.series.p95,
               n_scenarios: result.n_scenarios
             },
-            filter_summary: result.filter_summary
+            filter_summary: result.filter_summary,
+            isSingleScenario: result.isSingleScenario,
+            n_scenarios: result.n_scenarios
           };
           setSurfaceWaterData(enhancedResult);
           console.log('✅ Surface water data loaded:', {
@@ -294,11 +299,11 @@ export default function WaterAvailabilityPage() {
     const traces: any[] = [];
 
     // Add confidence interval if available (multiple scenarios mode)
-    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+    if (surfaceWaterData && !surfaceWaterData.isSingleScenario && series.min && series.max) {
       // Lower bound
       traces.push({
         x: series.time,
-        y: series.ci_lower,
+        y: series.min,
         type: 'scatter',
         mode: 'lines',
         line: { width: 0 },
@@ -309,7 +314,7 @@ export default function WaterAvailabilityPage() {
       // Upper bound with fill
       traces.push({
         x: series.time,
-        y: series.ci_upper,
+        y: series.max,
         type: 'scatter',
         mode: 'lines',
         fill: 'tonexty',
@@ -321,12 +326,12 @@ export default function WaterAvailabilityPage() {
     }
 
     // Main data line - 根据情景模式选择显示内容
-    const mainValue = scenarioResult && scenarioResult.isSingleScenario ? series.value : (series.mean || series.value);
-    
+    const mainValue = surfaceWaterData && surfaceWaterData.isSingleScenario ? series.value : (series.mean || series.value);
+
     const snwtpLabel = snwtpEnabled ? ' (with SNWTP)' : ' (no SNWTP)';
-    const displayName = scenarioResult && scenarioResult.isSingleScenario 
-      ? (scenarioResult.primaryScenario || 'Current Scenario') + snwtpLabel
-      : `Mean (${series.n_scenarios || scenarioResult?.count || '?'} scenarios)${snwtpLabel}`;
+    const displayName = surfaceWaterData && surfaceWaterData.isSingleScenario
+      ? (surfaceWaterData.primaryScenario || 'Current Scenario') + snwtpLabel
+      : `Mean (${series.n_scenarios || surfaceWaterData?.n_scenarios || '?'} scenarios)${snwtpLabel}`;
 
     traces.push({
       x: series.time,
@@ -418,7 +423,7 @@ export default function WaterAvailabilityPage() {
             ))}
           </div>
         </div>
-        
+
         {/* South-North Water Transfer Project Toggle */}
         <div className="flex items-center gap-3">
           <h3 className="font-semibold text-foreground">South-North Water Transfer:</h3>
@@ -605,23 +610,28 @@ export default function WaterAvailabilityPage() {
             </h4>
             <div className="space-y-3 text-base text-foreground leading-relaxed">
               <p>{scenarios[selectedScenario].description}</p>
-              <div className="mt-4 p-3 bg-card rounded-lg border">
-                <div className="text-sm font-medium text-muted-foreground mb-2">Current Scenario Status</div>
-                <div className="text-xs">
-                  {scenarioResult?.isSingleScenario ? (
-                    <div>
-                      <div className="font-medium text-green-600">Single Scenario Mode</div>
-                      <div>Scenario: {scenarioResult.primaryScenario}</div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="font-medium text-blue-600">Multiple Scenarios Mode</div>
-                      <div>Scenarios: {scenarioResult?.count || '?'} scenarios</div>
-                      <div>Showing mean ± confidence interval</div>
-            </div>
-                  )}
-            </div>
-          </div>
+
+              {/* Data Comparison Panel */}
+              {comparisonData.loading ? (
+                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
+                  <div className="text-sm text-muted-foreground">Loading comparison data...</div>
+                </div>
+              ) : comparisonData.error ? (
+                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
+                  <div className="text-sm text-red-600">Error loading data: {comparisonData.error}</div>
+                </div>
+              ) : comparisonData.temperature && comparisonData.precipitation && comparisonData.waterAvailability ? (
+                <DataComparisonPanel
+                  temperature={comparisonData.temperature}
+                  precipitation={comparisonData.precipitation}
+                  waterAvailability={comparisonData.waterAvailability}
+                  className="mt-4"
+                />
+              ) : (
+                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
+                  <div className="text-sm text-muted-foreground">No comparison data available</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

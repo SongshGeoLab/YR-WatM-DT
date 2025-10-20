@@ -393,8 +393,6 @@ export function useScenarioSeries(
                   time: multiResult.series.time,
                   value: multiResult.series.mean, // Use mean as primary value
                   mean: multiResult.series.mean,
-                  ci_lower: multiResult.series.ci_lower,
-                  ci_upper: multiResult.series.ci_upper,
                   min: multiResult.series.min,
                   max: multiResult.series.max,
                   std: multiResult.series.std,
@@ -402,7 +400,9 @@ export function useScenarioSeries(
                   p95: multiResult.series.p95,
                   n_scenarios: multiResult.n_scenarios
                 },
-                filter_summary: multiResult.filter_summary
+                filter_summary: multiResult.filter_summary,
+                isSingleScenario: multiResult.isSingleScenario,
+                n_scenarios: multiResult.n_scenarios
               };
 
               setData(enhancedResult);
