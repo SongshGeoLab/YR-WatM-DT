@@ -134,13 +134,15 @@ export function PlotlyChart({
 
       Plotly.newPlot(chartRef.current, data, darkModeLayout, plotConfig).then(() => {
         // Ensure chart is properly sized after creation
-        Plotly.Plots.resize(chartRef.current);
+        if (chartRef.current) {
+          Plotly.Plots.resize(chartRef.current);
 
-        // Add smooth transitions for better UX
-        Plotly.relayout(chartRef.current, {
-          'transition.duration': 500,
-          'transition.easing': 'cubic-in-out'
-        });
+          // Add smooth transitions for better UX
+          Plotly.relayout(chartRef.current, {
+            'transition.duration': 500,
+            'transition.easing': 'cubic-in-out'
+          });
+        }
       });
     } else {
       // Show placeholder when no data

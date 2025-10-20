@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { CloudRain } from 'lucide-react';
-import { useScenario } from '../../contexts/ScenarioContext';
+import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import * as api from '../../services/api';
 
 /**
@@ -11,11 +11,39 @@ import * as api from '../../services/api';
  * on surface water availability in the Yellow River Basin.
  */
 export default function WaterAvailabilityPage() {
-  const [selectedScenario, setSelectedScenario] = useState('RCP2.6');
-  const { parameters, scenarioResult } = useScenario();
+  const { parameters, scenarioResult, updateParameter } = useScenario();
   const [climateData, setClimateData] = useState<api.ClimateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get real surface water data using the global scenario context
+  const { data: surfaceWaterData, loading: surfaceWaterLoading, error: surfaceWaterError } = useScenarioSeries(
+    'YRB available surface water',
+    { start_step: 39, end_step: 1904 } // 2020-2100 (1981+39=2020, 1981+1904=2100)
+  );
+
+  // Derive selected scenario from global parameters
+  const selectedScenario = useMemo(() => {
+    const scenarioMap = {
+      1: 'RCP2.6',
+      2: 'RCP4.5',
+      3: 'RCP8.5'
+    };
+    return scenarioMap[parameters.climateScenario as keyof typeof scenarioMap] || 'RCP4.5';
+  }, [parameters.climateScenario]);
+
+  // Handle scenario selection
+  const handleScenarioChange = (scenario: string) => {
+    const climateScenarioMap = {
+      'RCP2.6': 1,
+      'RCP4.5': 2,
+      'RCP8.5': 3
+    };
+    const scenarioValue = climateScenarioMap[scenario as keyof typeof climateScenarioMap];
+    if (scenarioValue) {
+      updateParameter('climateScenario', scenarioValue);
+    }
+  };
 
   // Load climate data from API
   useEffect(() => {
@@ -180,64 +208,61 @@ export default function WaterAvailabilityPage() {
     ];
   }, [processedClimateData, selectedScenario]);
 
-  // Surface Water Availability chart data
-  const surfaceWaterData = useMemo(() => {
-    // Use a representative time range from climate data or default
-    const years = processedClimateData?.rcp26?.temp?.years || Array.from({ length: 81 }, (_, i) => 2020 + i);
+  // Surface Water Availability chart data using real data
+  const surfaceWaterChartData = useMemo(() => {
+    if (!surfaceWaterData || !surfaceWaterData.series) return [];
 
-    if (scenarioResult?.isSingleScenario) {
-      // Single scenario - show one line
-      const values = years.map(year => {
-        const progress = (year - 2020) / 80;
-        return 200 + progress * 50 + Math.sin(progress * Math.PI * 2) * 20;
-      });
+    const series = surfaceWaterData.series;
+    const traces: any[] = [];
 
-      return [{
+    // Add confidence interval if available (multiple scenarios mode)
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      // Lower bound
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
         type: 'scatter',
         mode: 'lines',
-        x: years,
-        y: values,
-        name: scenarioResult.primaryScenario || 'Current Scenario',
-        line: { color: '#06b6d4', width: 3 },
-        hovertemplate: '<b>Surface Water Availability</b><br>Year: %{x}<br>Value: %{y:.1f} ×10⁸ m³<extra></extra>'
-      }];
-    } else {
-      // Multiple scenarios - show confidence interval
-      const meanValues = years.map(year => {
-        const progress = (year - 2020) / 80;
-        return 200 + progress * 50 + Math.sin(progress * Math.PI * 2) * 20;
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
       });
 
-      const upperValues = meanValues.map(val => val * 1.15);
-      const lowerValues = meanValues.map(val => val * 0.85);
-
-      return [
-        {
-          type: 'scatter',
-          mode: 'lines',
-          x: [...years, ...years.slice().reverse()],
-          y: [...upperValues, ...lowerValues.slice().reverse()],
-          fill: 'toself',
-          fillcolor: 'rgba(6, 182, 212, 0.2)',
-          line: { color: 'rgba(255,255,255,0)' },
-          showlegend: false,
-          hovertemplate: 'Confidence Interval<extra></extra>'
-        },
-        {
-          type: 'scatter',
-          mode: 'lines',
-          x: years,
-          y: meanValues,
-          name: `Multiple Scenarios (n = ${scenarioResult?.count || '?'})`,
-          line: { color: '#06b6d4', width: 3 },
-          hovertemplate: '<b>Surface Water Availability (Mean)</b><br>Year: %{x}<br>Value: %{y:.1f} ×10⁸ m³<extra></extra>'
-        }
-      ];
+      // Upper bound with fill
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(6, 182, 212, 0.2)', // Cyan with transparency
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
     }
-  }, [processedClimateData, scenarioResult]);
+
+    // Main data line - 根据情景模式选择显示内容
+    const mainValue = scenarioResult && scenarioResult.isSingleScenario ? series.value : (series.mean || series.value);
+    const displayName = scenarioResult && scenarioResult.isSingleScenario
+      ? scenarioResult.primaryScenario || 'Current Scenario'
+      : `Mean (${series.n_scenarios || scenarioResult?.count || '?'} scenarios)`;
+
+    traces.push({
+      x: series.time,
+      y: mainValue,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#06b6d4', width: 3 },
+      name: displayName,
+      hovertemplate: '<b>Surface Water Availability</b><br>Year: %{x}<br>Value: %{y:.2f} ×10⁸ m³<extra></extra>'
+    });
+
+    return traces;
+  }, [surfaceWaterData, scenarioResult]);
 
   // Show loading state
-  if (loading) {
+  if (loading || surfaceWaterLoading) {
     return (
       <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden flex items-center justify-center">
         <div className="text-center">
@@ -245,22 +270,26 @@ export default function WaterAvailabilityPage() {
             <CloudRain className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">Loading Climate Data...</h2>
-          <p className="text-sm text-muted-foreground">Fetching RCP scenario data from server</p>
+          <p className="text-sm text-muted-foreground">
+            {loading ? 'Fetching RCP scenario data from server' : 'Loading surface water availability data'}
+          </p>
         </div>
       </div>
     );
   }
 
   // Show error state
-  if (error) {
+  if (error || surfaceWaterError) {
     return (
       <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg mx-auto mb-4">
             <CloudRain className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Error Loading Climate Data</h2>
-          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Error Loading Data</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {error || surfaceWaterError}
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
@@ -297,7 +326,7 @@ export default function WaterAvailabilityPage() {
             {Object.entries(scenarios).map(([key, scenario]) => (
               <button
                 key={key}
-                onClick={() => setSelectedScenario(key)}
+                onClick={() => handleScenarioChange(key)}
                 className={`px-4 py-2 rounded-lg border-2 transition-all ${
                   selectedScenario === key
                     ? `${scenario.bgColor} ${scenario.borderColor} ${scenario.textColor} font-medium shadow-sm`
@@ -428,7 +457,7 @@ export default function WaterAvailabilityPage() {
           <div className="flex-1 min-h-0">
             <PlotlyChart
               id="surface-water-availability"
-              data={surfaceWaterData}
+              data={surfaceWaterChartData}
               layout={{
                 title: {
                   text: 'Surface Water Availability Projections',
@@ -451,7 +480,13 @@ export default function WaterAvailabilityPage() {
                 height: 400,
                 font: { family: 'Inter, system-ui, sans-serif', size: 12 },
                 hovermode: 'x unified',
-                showlegend: false
+                showlegend: true,
+                legend: {
+                  orientation: 'h',
+                  y: -0.1,
+                  x: 0.5,
+                  xanchor: 'center'
+                }
               }}
               config={{ responsive: true, displayModeBar: false }}
               height="100%"

@@ -141,6 +141,11 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
 
       console.log('🔍 Resolving scenarios with parameters:', values);
 
+      // Add timeout to prevent infinite waiting
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Scenario resolution timeout')), 30000)
+      );
+
       // Check if any parameter is null - if so, we're in multi-scenario mode
       const hasNullParameters = Object.values(parameters).some(value => value === null);
 
@@ -215,22 +220,28 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
 
       // Try to resolve single scenario first
       try {
-        const result = await api.resolveScenario(values);
+        console.log('🔍 Attempting to resolve single scenario...');
+        const result = await Promise.race([
+          api.resolveScenario(values),
+          timeoutPromise
+        ]);
+        console.log('✅ Single scenario resolved:', result.scenario_name);
         setScenarioResult({
           scenarioNames: [result.scenario_name],
           count: 1,
           isSingleScenario: true,
           primaryScenario: result.scenario_name
         });
-        console.log('✅ Single scenario resolved:', result.scenario_name);
+        console.log('✅ Scenario result set successfully');
       } catch (singleErr) {
         // If single scenario fails, we might have multiple matches
-        console.log('⚠️ Single scenario resolution failed, likely multiple matches');
+        console.log('⚠️ Single scenario resolution failed, likely multiple matches:', singleErr);
         setScenarioResult({
           scenarioNames: [],
           count: 5, // Conservative estimate for multiple matches
           isSingleScenario: false
         });
+        console.log('✅ Fallback scenario result set');
       }
 
     } catch (err: any) {
@@ -366,10 +377,10 @@ export function useScenarioSeries(
             };
 
             if (options?.start_step !== undefined) {
-              yearOptions.start_year = 2020 + options.start_step;
+              yearOptions.start_year = 1981 + options.start_step;
             }
             if (options?.end_step !== undefined) {
-              yearOptions.end_year = 2020 + options.end_step;
+              yearOptions.end_year = 1981 + options.end_step;
             }
 
             // Fetch multi-scenario aggregated data
