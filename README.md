@@ -11,6 +11,20 @@ A decision theater application for exploring water management scenarios in the Y
 
 For end users, please refer to the user guides above. The technical documentation below is for developers and system administrators.
 
+## 🚀 Latest Updates (v2.0)
+
+### Successfully Refactored Pages
+- ✅ **Page 2: Climate & Water Availability** - Complete real data integration with SNWTP toggle
+- ✅ **Page 3: Demographics & Domestic Water** - Multi-scenario analysis with peak year detection
+- ✅ **Page 4: Ecological Water Flow** - Threshold comparison with SNWTP impact analysis
+
+### Key Technical Achievements
+- 🔧 **Multi-scenario Data Handling**: Proper uncertainty visualization with min/max and confidence intervals
+- 🌐 **Global vs Local Parameters**: SNWTP as local parameter affecting only specific variables
+- 📊 **Real-time Data Integration**: All pages now use actual backend data instead of simulated data
+- 🎨 **Responsive Design**: Optimized layouts for different screen sizes
+- 📈 **Advanced Analytics**: Peak year detection and threshold comparison features
+
 ---
 
 ## Architecture
@@ -37,7 +51,7 @@ For end users, please refer to the user guides above. The technical documentatio
 │  Data Layer (data_parquet/)                                     │
 │  Columnar Parquet files                                         │
 │  • time.parquet: [step, time]                                  │
-│  • scenarios.parquet: [scenario_name, param1..paramN]          │
+│  • scenarios.parquet: [scenario_name, param1..paramN, SNWTP]   │
 │  • {variable}.parquet: [scenario_name, step, value, variable]  │
 └─────────────────────────────────────────────────────────────────┘
 ```

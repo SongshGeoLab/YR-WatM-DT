@@ -411,9 +411,11 @@ const chartData = useMemo(() => {
 
 ## 🚀 Future Roadmap
 
-### 待集成页面
+### 页面集成状态
+- ✅ **Page 2: Water Availability** - 完全集成，真实数据 + SNWTP 开关 + 气候对比面板
+- ✅ **Page 3: Demographics** - 完全集成，多情景分析 + 峰值年份检测 + 不确定性可视化
+- ✅ **Page 4: Ecological Water** - 完全集成，阈值对比 + SNWTP 影响分析 + 生态流量计算
 - ⏳ Page 1: Study Area (研究区域)
-- ⏳ Page 3: Demographics (人口统计)
 - ⏳ Page 5: Agriculture (农业用水)
 - ⏳ Page 6: Water Stress (水资源压力)
 - ⏳ Page 7: Water Quality (水质)
@@ -424,6 +426,76 @@ const chartData = useMemo(() => {
 - [ ] 时间序列下采样（LTTB 算法）
 - [ ] 情景收藏和比较
 - [ ] 数据表格视图
+
+---
+
+---
+
+## 🔧 重构经验总结
+
+### 页面重构模式
+
+基于第二、三、四页面的重构经验，我们总结出以下标准模式：
+
+#### 1. **数据获取模式**
+```typescript
+// 标准数据获取模式
+const { data, loading, error } = useScenarioSeries('variable_name');
+
+// 自定义数据获取（用于特殊需求）
+useEffect(() => {
+  const fetchData = async () => {
+    const result = await api.getSeriesMulti('variable_name', filters, options);
+    // 处理数据...
+  };
+  fetchData();
+}, [parameters, localParams]);
+```
+
+#### 2. **多情景不确定性可视化**
+```typescript
+// 标准不确定性处理
+if (!scenarioResult.isSingleScenario && series.min && series.max) {
+  // 添加不确定性区间
+  traces.push({
+    x: series.time,
+    y: series.max,
+    fill: 'tonexty',
+    fillcolor: 'rgba(46, 134, 171, 0.2)',
+    // ...
+  });
+}
+```
+
+#### 3. **全局 vs 局部参数**
+```typescript
+// 全局参数：影响所有页面
+const { parameters, updateParameter } = useScenario();
+
+// 局部参数：仅影响当前页面
+const [localParam, setLocalParam] = useState(false);
+```
+
+#### 4. **响应式布局最佳实践**
+```typescript
+// 标准响应式布局
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div className="space-y-4">
+    {/* 左侧控制面板 */}
+  </div>
+  <div className="flex flex-col gap-6">
+    {/* 右侧图表区域 */}
+  </div>
+</div>
+```
+
+### 关键技术要点
+
+1. **参数名映射**: 确保前端参数名与后端 API 参数名一致
+2. **数据类型处理**: 正确处理单情景 vs 多情景数据的显示逻辑
+3. **容器高度**: 使用 `h-full overflow-hidden` 保持页面边距一致
+4. **图表高度**: 使用固定高度避免响应式布局问题
+5. **不确定性可视化**: 使用 `min/max` 和 `ci_lower/ci_upper` 字段
 
 ---
 
