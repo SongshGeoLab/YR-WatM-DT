@@ -398,6 +398,8 @@ export function useScenarioSeries(
                   std: multiResult.series.std,
                   p05: multiResult.series.p05,
                   p95: multiResult.series.p95,
+                  ci_lower: multiResult.series.p05, // Add ci_lower for compatibility
+                  ci_upper: multiResult.series.p95, // Add ci_upper for compatibility
                   n_scenarios: multiResult.n_scenarios
                 },
                 filter_summary: multiResult.filter_summary,
