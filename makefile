@@ -120,3 +120,53 @@ clean-dev:
 	@make kill-port PORT=8000
 	@make kill-vite PORTS="5173 3000 3001"
 	@echo "All servers stopped."
+
+# Release management commands
+.PHONY: commit
+commit:
+	@echo "🚀 启动 Release Please 提交助手..."
+	@bash scripts/commit.sh
+
+.PHONY: release-check
+release-check:
+	@echo "📋 检查 Release Please 配置..."
+	@if command -v release-please >/dev/null 2>&1; then \
+		release-please manifest; \
+	else \
+		echo "⚠️  release-please CLI 未安装，请运行: npm install -g release-please"; \
+	fi
+
+.PHONY: release-pr
+release-pr:
+	@echo "🚀 创建 Release PR..."
+	@if command -v release-please >/dev/null 2>&1; then \
+		release-please release-pr; \
+	else \
+		echo "⚠️  release-please CLI 未安装，请运行: npm install -g release-please"; \
+	fi
+
+.PHONY: version-info
+version-info:
+	@echo "📊 当前版本信息:"
+	@echo "================================"
+	@echo "主项目版本: $$(grep '^version = ' pyproject.toml | cut -d'"' -f2)"
+	@echo "前端版本: $$(grep '"version"' viz/package.json | cut -d'"' -f4)"
+	@echo "================================"
+	@echo ""
+	@echo "📚 Release Please 状态:"
+	@if [ -f ".github/workflows/release-please.yml" ]; then \
+		echo "✅ GitHub Actions 工作流已配置"; \
+	else \
+		echo "❌ GitHub Actions 工作流未找到"; \
+	fi
+	@if [ -f "release-please-config.json" ]; then \
+		echo "✅ Release Please 配置文件已存在"; \
+	else \
+		echo "❌ Release Please 配置文件未找到"; \
+	fi
+	@if [ -f "CHANGELOG.md" ]; then \
+		echo "✅ CHANGELOG.md 已存在"; \
+		echo "📄 最新版本: $$(head -10 CHANGELOG.md | grep '^## \[' | head -1)"; \
+	else \
+		echo "❌ CHANGELOG.md 未找到"; \
+	fi

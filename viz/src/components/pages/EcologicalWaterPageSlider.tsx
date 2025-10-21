@@ -265,7 +265,7 @@ export function EcologicalWaterPageSlider() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Ecological Water Flow Analysis</h1>
             <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
-              Threshold Comparison
+              Page 4
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">

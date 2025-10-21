@@ -383,7 +383,7 @@ export default function DemographicsPageOptimized() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Demography and Domestic Water Usage</h1>
             <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
-              Page 3 - Global Integration 🌐
+              Page 3
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">

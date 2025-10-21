@@ -55,13 +55,13 @@ function AppInner() {
   };
 
   const tabs = [
-    { name: 'Study Area', icon: Map, color: 'blue' },
-    { name: 'Water Availability', icon: CloudRain, color: 'cyan' },
+    { name: 'Introduction', icon: Map, color: 'blue' },
+    { name: 'Climate Change', icon: CloudRain, color: 'cyan' },
     { name: 'Demographics', icon: Users, color: 'purple' },
     { name: 'Ecological Water', icon: TreePine, color: 'green' },
-    { name: 'Agriculture', icon: Sprout, color: 'orange' },
-    { name: 'WSI Focus', icon: Gauge, color: 'red' },
-    { name: 'Water Stress', icon: Activity, color: 'indigo' }
+    { name: 'Water Demand', icon: Sprout, color: 'orange' },
+    { name: 'Water Composition', icon: Gauge, color: 'red' },
+    { name: 'Water Stress Index', icon: Activity, color: 'indigo' }
   ];
 
   const renderPage = () => {
@@ -120,7 +120,7 @@ function AppInner() {
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-card border-r border-border flex flex-col">
+        <div className="w-72 bg-card border-r border-border flex flex-col">
           <nav className="p-4 flex-1">
             <ul className="space-y-2">
               {tabs.map((tab, index) => {

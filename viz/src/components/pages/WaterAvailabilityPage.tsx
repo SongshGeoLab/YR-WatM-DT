@@ -394,7 +394,7 @@ export default function WaterAvailabilityPage() {
         </div>
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-foreground">Climate Change Scenarios</h1>
+            <h1 className="text-4xl font-bold text-foreground">Climate Change Impact Analysis</h1>
             <span className="px-3 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full text-sm font-medium">
               Page 2
             </span>

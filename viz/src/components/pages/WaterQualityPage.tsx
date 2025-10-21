@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
-import { Activity, Gauge } from 'lucide-react';
+import { Activity, Gauge, Leaf, Scale, Factory } from 'lucide-react';
 
 /**
  * Water Stress Index Chart Component
@@ -105,6 +106,29 @@ const WaterStressIndexChart = React.memo(({
  */
 export default function WaterQualityPage() {
   const { scenarioResult } = useScenario();
+  const [selectedScenario, setSelectedScenario] = useState('tSSP1-RCP2.6');
+
+  // Global scenario definitions
+  const scenarios = {
+    'tSSP1-RCP2.6': {
+      name: 'Radical sustainable transformation',
+      description: 'Strong sustainability policies, low population growth, rapid technological progress, and ambitious climate action',
+      icon: Leaf,
+      color: 'bg-green-500'
+    },
+    'tSSP2-RCP4.5': {
+      name: 'Balancing economy and sustainability',
+      description: 'Moderate policies, balanced development, and gradual climate action with mixed economic growth',
+      icon: Scale,
+      color: 'bg-amber-500'
+    },
+    'tSSP5-RCP8.5': {
+      name: 'Focusing on economic development',
+      description: 'Market-driven development, high economic growth, and limited climate action with high emissions',
+      icon: Factory,
+      color: 'bg-red-500'
+    }
+  };
 
   // Fetch data using global scenario context
   const { data: wsiData, loading: wsiLoading, error: wsiError } = useScenarioSeries('yrb_wsi');
@@ -123,7 +147,7 @@ export default function WaterQualityPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Water Stress Index Analysis</h1>
             <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">
-              Page 7 - Global Integration 🌐
+              Page 7
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -134,6 +158,50 @@ export default function WaterQualityPage() {
                `Multiple Scenarios (${scenarioResult?.count || '?'})`
             } | Water Stress Index Monitoring & Analysis
           </p>
+        </div>
+      </div>
+
+      {/* Global Scenario Selection */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">Global Scenario Selection</h2>
+        <p className="text-lg text-muted-foreground mb-6">
+          Select a preset of parameters from three overall scenarios:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Object.entries(scenarios).map(([key, scenario]) => {
+            const Icon = scenario.icon;
+            return (
+              <Tooltip key={key}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setSelectedScenario(key)}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedScenario === key
+                        ? `${scenario.color} border-transparent text-white`
+                        : 'bg-card border-border hover:border-muted-foreground text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        selectedScenario === key
+                          ? 'bg-white/20 text-white'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="font-medium">{scenario.name}</div>
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-md">
+                  <div className="space-y-2">
+                    <div className="font-medium text-base">{scenario.name}</div>
+                    <div className="text-sm opacity-90">{scenario.description}</div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
       </div>
 

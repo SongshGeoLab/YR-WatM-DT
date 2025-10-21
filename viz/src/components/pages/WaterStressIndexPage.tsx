@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
-import GlobalScenarioSelection from '../GlobalScenarioSelection';
+import { ParameterSlider } from '../ui/parameter-slider';
 import { Gauge, TreePine } from 'lucide-react';
+import WaterCompositionComparisonPanel from '../WaterCompositionComparisonPanel';
+import { useWaterCompositionComparison } from '../../hooks/useWaterCompositionComparison';
+import * as api from '../../services/api';
 
 /**
  * Water Composition Tree Chart Component
@@ -44,29 +47,46 @@ const WaterCompositionTreeChart = React.memo(({
     const oaValue = getLatestValue(oaSeries);
     const domesticValue = getLatestValue(domesticSeries);
 
+
     const categories = ['Irrigation', 'Production', 'Other Activities', 'Domestic'];
     const values = [irrigationValue, productionValue, oaValue, domesticValue];
     const colors = ['#f97316', '#3b82f6', '#8b5cf6', '#ef4444'];
 
+    // Filter out zero values and create labels with percentages
+    const filteredData = categories.map((cat, i) => ({
+      label: cat,
+      value: values[i],
+      color: colors[i]
+    })).filter(item => item.value > 0);
+
+    const filteredLabels = filteredData.map(item => item.label);
+    const filteredValues = filteredData.map(item => item.value);
+    const filteredColors = filteredData.map(item => item.color);
+
+    // Create treemap data
+    const totalValue = filteredValues.reduce((sum, val) => sum + val, 0);
+    const parents = Array(filteredLabels.length).fill("");
+
     return [{
       type: 'treemap',
-      labels: categories,
-      values: values,
-      parents: Array(categories.length).fill(""),
+      labels: filteredLabels,
+      values: filteredValues,
+      parents: parents,
       marker: {
-        colors: colors,
+        colors: filteredColors,
         line: { width: 2, color: 'white' }
       },
-      textinfo: 'label+value+percent parent',
-      textfont: { size: 14, color: 'white' },
-      hovertemplate: '<b>%{label}</b><br>Value: %{value:.2e}<br>Percentage: %{percentParent:.1%}<extra></extra>'
+      textinfo: 'label+value+percent',
+      textfont: { size: 12, color: 'white' },
+      hovertemplate: '<b>%{label}</b><br>Value: %{value:.2e}<br>Percentage: %{percent:.1%}<extra></extra>',
+      branchvalues: 'total'
     }];
   }, [irrigationData, productionData, oaData, domesticData, scenarioResult]);
 
   const layout = useMemo(() => ({
     margin: { l: 20, r: 20, t: 50, b: 20 },
     title: {
-      text: 'Water Demand Composition (Tree Map)',
+      text: 'Water Demand Composition (Treemap)',
       x: 0.5,
       xanchor: 'center',
       font: { size: 16 }
@@ -77,7 +97,7 @@ const WaterCompositionTreeChart = React.memo(({
     <PlotlyChart
       id={id}
       title="Water Demand Composition"
-      description="Water demand composition by sector using tree map visualization"
+      description="Water demand composition by sector using treemap visualization"
       height="400px"
       data={plotData}
       layout={layout}
@@ -179,10 +199,60 @@ const TotalWaterDemandChart = React.memo(({
 });
 
 /**
- * Water Stress Index Page with Global Scenario Selection
+ * Water Composition Analysis Page with Parameter Sliders
  */
 export default function WaterStressIndexPage() {
-  const { scenarioResult } = useScenario();
+  const { scenarioResult, updateParameter, parameters } = useScenario();
+  const [parameterRanges, setParameterRanges] = useState<{
+    irrigation?: { min: number; max: number; step: number };
+    fire?: { min: number; max: number; step: number };
+  }>({});
+
+  // Get current parameter values from global context
+  const irrigationEfficiency = parameters?.irrigationEfficiency;
+  const fireGenerationShare = parameters?.fireGenerationShare;
+
+  // Fetch parameter ranges from API
+  useEffect(() => {
+    const fetchParameterRanges = async () => {
+      try {
+        const params = await api.getParams();
+
+        // Get irrigation efficiency parameter range
+        const irrigationParamName = 'water saving irrigation efficiency ratio';
+        const irrigationValues = params[irrigationParamName];
+        if (irrigationValues && irrigationValues.length > 0) {
+          const irrigationMin = Math.min(...irrigationValues);
+          const irrigationMax = Math.max(...irrigationValues);
+          const irrigationStep = irrigationValues.length > 1 ?
+            Math.min(...irrigationValues.slice(1).map((v, i) => Math.abs(v - irrigationValues[i]))) : 0.01;
+
+          setParameterRanges(prev => ({
+            ...prev,
+            irrigation: { min: irrigationMin, max: irrigationMax, step: irrigationStep }
+          }));
+        }
+
+        // Get fire generation share parameter range
+        const fireParamName = 'fire generation share province target';
+        const fireValues = params[fireParamName];
+        if (fireValues && fireValues.length > 0) {
+          const fireMin = Math.min(...fireValues);
+          const fireMax = Math.max(...fireValues);
+          const fireStep = fireValues.length > 1 ?
+            Math.min(...fireValues.slice(1).map((v, i) => Math.abs(v - fireValues[i]))) : 0.01;
+
+          setParameterRanges(prev => ({
+            ...prev,
+            fire: { min: fireMin, max: fireMax, step: fireStep }
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch parameter ranges:', error);
+      }
+    };
+    fetchParameterRanges();
+  }, []);
 
   // Fetch data using global scenario context
   const { data: irrigationData, loading: irrigationLoading, error: irrigationError } = useScenarioSeries('irrigation water demand province sum');
@@ -191,21 +261,25 @@ export default function WaterStressIndexPage() {
   const { data: domesticData, loading: domesticLoading, error: domesticError } = useScenarioSeries('domestic water demand province sum');
   const { data: totalWaterData, loading: totalWaterLoading, error: totalWaterError } = useScenarioSeries('water consumption of province in YRB sum');
 
+  // Get comparison data
+  const comparisonData = useWaterCompositionComparison();
+
   // Loading state
   const isLoading = irrigationLoading || productionLoading || oaLoading || domesticLoading || totalWaterLoading;
   const hasError = irrigationError || productionError || oaError || domesticError || totalWaterError;
 
+
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
       <div className="flex items-center gap-6 mb-6">
-        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg">
+        <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg">
           <Gauge className="w-8 h-8" />
         </div>
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-foreground">Water Demand Analysis</h1>
-            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
-              Page 6 - Global Integration 🌐
+            <h1 className="text-4xl font-bold text-foreground">Water Composition Analysis</h1>
+            <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
+              Page 6
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -214,16 +288,71 @@ export default function WaterStressIndexPage() {
              scenarioResult?.isSingleScenario ?
                `Scenario: ${scenarioResult.primaryScenario}` :
                `Multiple Scenarios (${scenarioResult?.count || '?'})`
-            } | Total Water Demand Trends & Composition Analysis
+            } | Water Composition Trends & Total Demand Analysis
           </p>
         </div>
       </div>
 
-      {/* Global Scenario Selection */}
-      <div className="mb-6">
-        <GlobalScenarioSelection />
+      {/* Parameter Controls */}
+      <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Irrigation Efficiency Parameter */}
+        <div className="space-y-3">
+          {irrigationEfficiency !== null ? (
+            <ParameterSlider
+              label="Water Saving Irrigation Efficiency Ratio (Global)"
+              min={parameterRanges.irrigation?.min || 0.8}
+              max={parameterRanges.irrigation?.max || 1.0}
+              step={parameterRanges.irrigation?.step || 0.01}
+              defaultValue={irrigationEfficiency}
+              unit=""
+              description="Efficiency ratio for irrigation water saving - affects all pages"
+              onChange={(v) => updateParameter('irrigationEfficiency', v)}
+            />
+          ) : (
+            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Irrigation Efficiency: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+              </p>
+              <button
+                onClick={() => updateParameter('irrigationEfficiency', 0.9)}
+                className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                Set to 0.9
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Fire Generation Share Parameter */}
+        <div className="space-y-3">
+          {fireGenerationShare !== null ? (
+            <ParameterSlider
+              label="Fire Generation Share Province Target (Global)"
+              min={parameterRanges.fire?.min || 0.1}
+              max={parameterRanges.fire?.max || 0.4}
+              step={parameterRanges.fire?.step || 0.01}
+              defaultValue={fireGenerationShare}
+              unit=""
+              description="Target share of thermal power generation - affects all pages"
+              onChange={(v) => updateParameter('fireGenerationShare', v)}
+            />
+          ) : (
+            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Fire Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+              </p>
+              <button
+                onClick={() => updateParameter('fireGenerationShare', 0.25)}
+                className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                Set to 0.25
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Water Composition Tree Chart */}
         <div className="h-[400px]">
@@ -257,6 +386,30 @@ export default function WaterStressIndexPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comparison Panel - Bottom Row */}
+      <div className="mt-6">
+        {comparisonData.loading ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">Loading comparison data...</p>
+          </div>
+        ) : comparisonData.error ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-red-600">Error loading data: {comparisonData.error}</p>
+          </div>
+        ) : comparisonData.irrigation && comparisonData.production && comparisonData.domestic ? (
+            <WaterCompositionComparisonPanel
+              irrigation={comparisonData.irrigation}
+              production={comparisonData.production}
+              domestic={comparisonData.domestic}
+              className="h-[200px]"
+            />
+        ) : (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">No comparison data available</p>
+          </div>
+        )}
       </div>
     </div>
   );

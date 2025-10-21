@@ -11,19 +11,28 @@ A decision theater application for exploring water management scenarios in the Y
 
 For end users, please refer to the user guides above. The technical documentation below is for developers and system administrators.
 
-## 🚀 Latest Updates (v2.0)
+## 🚀 Latest Updates
 
-### Successfully Refactored Pages
-- ✅ **Page 2: Climate & Water Availability** - Complete real data integration with SNWTP toggle
+> **注意**: 本项目使用 [Google Release Please](https://github.com/googleapis/release-please) 进行自动化版本管理。版本号由提交消息自动生成，请勿手动修改。
+
+当前版本: **v1.2.0** → **v2.0.0** (待发布)
+
+### Complete Page Refactoring
+- ✅ **Page 1: Introduction** - Yellow River Basin overview with river analysis bubble charts
+- ✅ **Page 2: Climate Change Impact Analysis** - Complete real data integration with SNWTP toggle
 - ✅ **Page 3: Demographics & Domestic Water** - Multi-scenario analysis with peak year detection
 - ✅ **Page 4: Ecological Water Flow** - Threshold comparison with SNWTP impact analysis
+- ✅ **Page 5: Water Demand Analysis** - Irrigation and production water demand with parameter sliders
+- ✅ **Page 6: Water Composition Analysis** - Water demand composition trends and total demand analysis
+- ✅ **Page 7: Water Stress Index Analysis** - Global scenario selection and water stress monitoring
 
 ### Key Technical Achievements
-- 🔧 **Multi-scenario Data Handling**: Proper uncertainty visualization with min/max and confidence intervals
-- 🌐 **Global vs Local Parameters**: SNWTP as local parameter affecting only specific variables
-- 📊 **Real-time Data Integration**: All pages now use actual backend data instead of simulated data
-- 🎨 **Responsive Design**: Optimized layouts for different screen sizes
-- 📈 **Advanced Analytics**: Peak year detection and threshold comparison features
+- 🔧 **Complete Real Data Integration**: All 7 pages now use actual backend data
+- 🌐 **Global Scenario Selection**: Moved to Page 7 for better user flow
+- 📊 **Now vs Future Comparison Panels**: Added comparison panels for Pages 5 & 6
+- 🎨 **Optimized UI**: Improved navigation width and unified page labeling
+- 📈 **Advanced Analytics**: Multi-scenario uncertainty visualization with confidence intervals
+- 🧹 **Code Cleanup**: Removed redundant components and optimized file structure
 
 ---
 

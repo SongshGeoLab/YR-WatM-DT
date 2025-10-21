@@ -1,9 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
 import { Card } from '../ui/card';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import { Sprout, Factory } from 'lucide-react';
+import * as api from '../../services/api';
+import WaterDemandComparisonPanel from '../WaterDemandComparisonPanel';
+import { useWaterDemandComparison } from '../../hooks/useWaterDemandComparison';
 
 /**
  * Irrigation Water Demand Chart Component
@@ -201,9 +204,66 @@ export default function WaterDemandPageWithRealData() {
   const irrigationEfficiency = parameters.irrigationEfficiency;
   const fireGenerationShare = parameters.fireGenerationShare;
 
+  // Parameter ranges from API
+  const [parameterRanges, setParameterRanges] = useState<{
+    irrigation?: { min: number; max: number; step: number };
+    fire?: { min: number; max: number; step: number };
+  }>({});
+
+  // Fetch parameter ranges from API
+  useEffect(() => {
+    const fetchParameterRanges = async () => {
+      try {
+        const params = await api.getParams();
+
+        // Get irrigation efficiency parameter range
+        const irrigationParamName = 'water saving irrigation efficiency ratio';
+        const irrigationValues = params[irrigationParamName];
+        if (irrigationValues && irrigationValues.length > 0) {
+          const irrigationMin = Math.min(...irrigationValues);
+          const irrigationMax = Math.max(...irrigationValues);
+          const irrigationStep = irrigationValues.length > 1 ?
+            Math.min(...irrigationValues.slice(1).map((v, i) => Math.abs(v - irrigationValues[i]))) : 0.01;
+
+          setParameterRanges(prev => ({
+            ...prev,
+            irrigation: { min: irrigationMin, max: irrigationMax, step: irrigationStep }
+          }));
+        }
+
+        // Get fire generation share parameter range
+        const fireParamName = 'fire generation share province target';
+        const fireValues = params[fireParamName];
+        if (fireValues && fireValues.length > 0) {
+          const fireMin = Math.min(...fireValues);
+          const fireMax = Math.max(...fireValues);
+          const fireStep = fireValues.length > 1 ?
+            Math.min(...fireValues.slice(1).map((v, i) => Math.abs(v - fireValues[i]))) : 0.01;
+
+          setParameterRanges(prev => ({
+            ...prev,
+            fire: { min: fireMin, max: fireMax, step: fireStep }
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch parameter ranges:', error);
+        // Fallback to default ranges
+        setParameterRanges({
+          irrigation: { min: 0.8, max: 1.0, step: 0.01 },
+          fire: { min: 0.1, max: 0.4, step: 0.01 }
+        });
+      }
+    };
+
+    fetchParameterRanges();
+  }, []);
+
   // Fetch data using global scenario context
   const { data: irrigationData, loading: irrigationLoading, error: irrigationError } = useScenarioSeries('irrigation water demand province sum');
   const { data: productionData, loading: productionLoading, error: productionError } = useScenarioSeries('production water demand province sum');
+
+  // Get comparison data
+  const comparisonData = useWaterDemandComparison();
 
   // Loading state
   const isLoading = irrigationLoading || productionLoading;
@@ -219,7 +279,7 @@ export default function WaterDemandPageWithRealData() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Water Demand Analysis</h1>
             <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-sm font-medium">
-              Page 5 - Global Integration 🌐
+              Page 5
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -254,9 +314,9 @@ export default function WaterDemandPageWithRealData() {
             {irrigationEfficiency !== null ? (
               <ParameterSlider
                 label="Water Saving Irrigation Efficiency Ratio (Global)"
-                min={0.8}
-                max={1.0}
-                step={0.01}
+                min={parameterRanges.irrigation?.min || 0.8}
+                max={parameterRanges.irrigation?.max || 1.0}
+                step={parameterRanges.irrigation?.step || 0.01}
                 defaultValue={irrigationEfficiency}
                 unit=""
                 description="Efficiency ratio for irrigation water saving - affects all pages"
@@ -282,9 +342,9 @@ export default function WaterDemandPageWithRealData() {
             {fireGenerationShare !== null ? (
               <ParameterSlider
                 label="Fire Generation Share Province Target (Global)"
-                min={0.1}
-                max={0.4}
-                step={0.01}
+                min={parameterRanges.fire?.min || 0.1}
+                max={parameterRanges.fire?.max || 0.4}
+                step={parameterRanges.fire?.step || 0.01}
                 defaultValue={fireGenerationShare}
                 unit=""
                 description="Target share of thermal power generation - affects all pages"
@@ -338,6 +398,29 @@ export default function WaterDemandPageWithRealData() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comparison Panel - Bottom Row */}
+      <div className="mt-6">
+        {comparisonData.loading ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">Loading comparison data...</p>
+          </div>
+        ) : comparisonData.error ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-red-600">Error loading data: {comparisonData.error}</p>
+          </div>
+        ) : comparisonData.irrigation && comparisonData.production ? (
+          <WaterDemandComparisonPanel
+            irrigation={comparisonData.irrigation}
+            production={comparisonData.production}
+            className="h-[200px]"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">No comparison data available</p>
+          </div>
+        )}
       </div>
     </div>
   );
