@@ -180,7 +180,7 @@ def build_scenarios_parquet(excel_path: Path, out_dir: Path, compression: str) -
 def wide_csv_to_long_df(csv_path: Path, variable: str) -> pl.DataFrame:
     """Convert a wide CSV (rows=scenarios, cols=time steps) to a long DataFrame.
 
-    The resulting schema is: scenario_name: cat, step: u32, value: f64, variable: cat
+    The resulting schema is: scenario_name: cat, step: u32, value: f32, variable: cat
 
     Args:
         csv_path: Path to the wide CSV file
@@ -200,10 +200,17 @@ def wide_csv_to_long_df(csv_path: Path, variable: str) -> pl.DataFrame:
     long_df = df.melt(
         id_vars=["scenario_name"], variable_name="step", value_name="value"
     )
+    
+    # Apply data corrections based on variable name
+    value_expr = pl.col("value")
+    if variable == "OA water demand province sum":
+        # OA water demand has unit issues in raw data, multiply by 100
+        value_expr = value_expr * 100
+    
     long_df = long_df.with_columns(
         pl.col("scenario_name").cast(pl.Categorical),
         pl.col("step").cast(pl.UInt32),
-        pl.col("value").cast(pl.Float64),
+        value_expr.cast(pl.Float32),  # Use Float32 to reduce file size by ~50%
         pl.lit(variable).alias("variable").cast(pl.Categorical),
     )
     return long_df

@@ -55,11 +55,11 @@ def process_excel_to_parquet(excel_file, output_dir, variable_name):
         if year_col != "Year":
             df_long = df_long.rename({year_col: "Year"})
 
-        # Cast all numeric columns to Float64 for consistency
+        # Cast all numeric columns to Float32 to reduce file size
         df_long = df_long.with_columns(
             [
                 pl.col("Year").cast(pl.Int64),
-                pl.col("Value").cast(pl.Float64),
+                pl.col("Value").cast(pl.Float32),
                 pl.lit(variable_name).alias("Variable"),
                 pl.lit(sheet_name).alias("CropType"),
             ]
