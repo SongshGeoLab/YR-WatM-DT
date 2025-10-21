@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { LeafletMap } from '../maps/LeafletMap';
 import { PlotlyChart } from '../charts/PlotlyChart';
-import { Map, Droplets, Mountain } from 'lucide-react';
+import { HistoricalDataViewer } from '../charts/HistoricalDataViewer';
+import { Map, Droplets, Mountain, Calendar, Clock } from 'lucide-react';
 
 /**
  * Study Area Page Component
@@ -11,6 +12,7 @@ import { Map, Droplets, Mountain } from 'lucide-react';
  */
 export default function StudyAreaPage() {
   const [activeTab, setActiveTab] = useState<'discharge' | 'sediment'>('discharge');
+  const [currentYear, setCurrentYear] = useState<number>(1000);
 
   // River discharge data (from the successful RiverAnalysisPage)
   const dischargeData = useMemo(() => {
@@ -291,7 +293,7 @@ export default function StudyAreaPage() {
 
 
   return (
-    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
+    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-auto">
       <div className="flex items-center gap-6 mb-6">
         <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg">
           <Map className="w-8 h-8" />
@@ -307,82 +309,91 @@ export default function StudyAreaPage() {
         </div>
       </div>
 
+      <div className="space-y-8">
+        {/* Main content - Map and Description */}
+        <div className="flex gap-8 h-[500px]">
+          {/* Left side - River Analysis Charts */}
+          <div className="flex-1 flex flex-col space-y-4 min-h-0">
+            <div className="space-y-3 flex-shrink-0">
+              <h3 className="font-semibold text-foreground text-lg">Global River Comparison</h3>
+              <div className="space-y-3 text-foreground leading-relaxed text-base">
+                <p>
+                  The Yellow River is globally famous for its exceptionally high sediment load
+                  relative to its water discharge. This unique characteristic distinguishes it from other major river
+                  systems worldwide.
+                </p>
+              </div>
+            </div>
 
-      {/* Main content - Map and Description */}
-      <div className="flex gap-8 max-h-[calc(100%-16rem)] overflow-hidden">
-        {/* Left side - River Analysis Charts */}
-        <div className="flex-1 flex flex-col space-y-4 min-h-0">
-          <div className="space-y-3 flex-shrink-0">
-            <h3 className="font-semibold text-foreground text-lg">Global River Comparison</h3>
-            <div className="space-y-3 text-foreground leading-relaxed text-base">
-              <p>
-                The Yellow River is globally famous for its exceptionally high sediment load
-                relative to its water discharge. This unique characteristic distinguishes it from other major river
-                systems worldwide.
-              </p>
+            {/* Tab buttons */}
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => setActiveTab('discharge')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'discharge'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <Droplets className="w-4 h-4 inline mr-2" />
+                River-station discharge
+              </button>
+              <button
+                onClick={() => setActiveTab('sediment')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'sediment'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <Mountain className="w-4 h-4 inline mr-2" />
+                River sediment load
+              </button>
+            </div>
+
+            {/* Chart container */}
+            <div className="flex-1 bg-muted rounded-lg p-4 min-h-0 overflow-hidden">
+              {activeTab === 'discharge' ? (
+                <PlotlyChart
+                  id="discharge-chart"
+                  data={dischargeChartData}
+                  layout={dischargeLayout}
+                  config={{ responsive: true, displayModeBar: false }}
+                  height="100%"
+                />
+              ) : (
+                <PlotlyChart
+                  id="sediment-chart"
+                  data={sedimentChartData}
+                  layout={sedimentLayout}
+                  config={{ responsive: true, displayModeBar: false }}
+                  height="100%"
+                />
+              )}
             </div>
           </div>
 
-          {/* Tab buttons */}
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => setActiveTab('discharge')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'discharge'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Droplets className="w-4 h-4 inline mr-2" />
-              River-station discharge
-            </button>
-            <button
-              onClick={() => setActiveTab('sediment')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'sediment'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Mountain className="w-4 h-4 inline mr-2" />
-              River sediment load
-            </button>
-          </div>
-
-          {/* Chart container */}
-          <div className="flex-1 bg-muted rounded-lg p-4 min-h-0 overflow-hidden">
-            {activeTab === 'discharge' ? (
-              <PlotlyChart
-                id="discharge-chart"
-                data={dischargeChartData}
-                layout={dischargeLayout}
-                config={{ responsive: true, displayModeBar: false }}
+          {/* Right side - Map */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="mb-3 flex-shrink-0">
+              <h3 className="font-semibold text-foreground mb-2 text-lg">Interactive Basin Map</h3>
+            </div>
+            <div className="flex-1 min-h-0 bg-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
+              <LeafletMap
+                id="yellow-river-basin-map"
                 height="100%"
+                className="w-full h-full rounded-lg"
               />
-            ) : (
-              <PlotlyChart
-                id="sediment-chart"
-                data={sedimentChartData}
-                layout={sedimentLayout}
-                config={{ responsive: true, displayModeBar: false }}
-                height="100%"
-              />
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Right side - Map */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="mb-3 flex-shrink-0">
-            <h3 className="font-semibold text-foreground mb-2 text-lg">Interactive Basin Map</h3>
+        {/* Historical Data Section */}
+        <div className="border-t-2 border-dashed border-border pt-8">
+          <div className="mb-4">
+            <h3 className="font-semibold text-foreground text-lg mb-2">Historical Trends</h3>
           </div>
-          <div className="flex-1 min-h-0 bg-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
-            <LeafletMap
-              id="yellow-river-basin-map"
-              height="100%"
-              className="w-full h-full rounded-lg"
-            />
-          </div>
+          <HistoricalDataViewer onYearChange={setCurrentYear} />
         </div>
       </div>
     </div>
