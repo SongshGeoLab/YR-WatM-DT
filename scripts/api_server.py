@@ -675,7 +675,7 @@ def get_page5_data(
     """Get water demand analysis data for Page 5 frontend.
 
     This endpoint provides pre-computed water demand composition and time series data
-    based on water-saving irrigation efficiency ratio and fire generation share parameters.
+    based on water saving irrigation efficiency ratio and fire generation share parameters.
     """
     try:
         # Import the Page5 analysis functions
@@ -707,7 +707,7 @@ def get_page5_data(
 
         # Build filters
         filters: Dict[str, Union[float, int, str, List]] = {
-            "water-saving irrigation efficiency ratio": water_saving_ratio,
+            "water saving irrigation efficiency ratio": water_saving_ratio,
             "fire generation share province target": energy_generation,
             "Fertility Variation": 1.7,
             "Ecological water flow variable": 0.25,

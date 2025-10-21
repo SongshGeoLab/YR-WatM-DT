@@ -381,7 +381,7 @@ const WaterDemandPageWithRealData: React.FC = () => {
                 step={0.05}
                 defaultValue={irrigationEfficiency}
                 unit=""
-                description="Water-saving irrigation efficiency ratio - affects all pages"
+                description="water saving irrigation efficiency ratio - affects all pages"
                 onChange={(v) => updateParameter('irrigationEfficiency', v)}
               />
             ) : (

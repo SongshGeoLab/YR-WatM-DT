@@ -250,7 +250,7 @@ comparison = compare_params(
         "Ecological water flow variable": 0.25,
         "fire generation share province target": 0.15
     },
-    vary_param="water-saving irrigation efficiency ratio",  # 这个参数会作为列
+    vary_param="water saving irrigation efficiency ratio",  # 这个参数会作为列
     time_range=(2020, 2100)
 )
 

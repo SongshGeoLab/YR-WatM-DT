@@ -201,7 +201,7 @@
 **功能**: 展示农业用水需求和节水灌溉技术的影响。
 
 **可调整参数**:
-- **节水灌溉效率** (water-saving irrigation efficiency ratio)
+- **节水灌溉效率** (water saving irrigation efficiency ratio)
   - 范围: 0.8 ~ 1.0
   - 数值越高表示节水效果越好
 - **火力发电占比目标** (fire generation share province target)
@@ -276,7 +276,7 @@
 | 参数名称 | 英文名称 | 取值范围 | 影响页面 |
 |---------|---------|---------|---------|
 | 生育率变化 | Fertility Variation | 1.6, 1.65, 1.7, 1.75, 1.8 | Demographics |
-| 节水灌溉效率 | water-saving irrigation efficiency ratio | 0.8, 0.85, 0.9, 0.95, 1.0 | Agriculture |
+| 节水灌溉效率 | water saving irrigation efficiency ratio | 0.8, 0.85, 0.9, 0.95, 1.0 | Agriculture |
 | 火电占比目标 | fire generation share province target | 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4 | Agriculture |
 | 生态流量变量 | Ecological water flow variable | 0.2, 0.25, 0.3 | Ecological Water |
 | 气候变化情景 | Climate change scenario switch | 1, 2, 3 | Water Availability |

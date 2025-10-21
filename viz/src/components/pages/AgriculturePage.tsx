@@ -39,7 +39,7 @@ export default function AgriculturePage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <label className="text-sm font-medium text-foreground">
-                Water-saving Irrigation Efficiency Ratio
+                water saving irrigation efficiency ratio
               </label>
               <ExplanationPopover explanationKey="irrigation_efficiency" lang="en" iconSize={14} />
             </div>

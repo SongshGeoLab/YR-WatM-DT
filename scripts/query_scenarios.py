@@ -34,7 +34,7 @@ wide_data = query.get_series_wide(
     variable="GDP per capita",
     filters={"Diet change scenario switch": 1},
     index_col="time",
-    columns_col="water-saving irrigation efficiency ratio"
+    columns_col="water saving irrigation efficiency ratio"
 )
 # Returns pivoted DataFrame: rows=time, columns=parameter values
 
@@ -350,7 +350,7 @@ def compare_params(
         >>> comparison = compare_params(
         ...     variable="YRB WSI",
         ...     fixed_params={"Fertility Variation": 1.6, "Diet change scenario switch": 1},
-        ...     vary_param="water-saving irrigation efficiency ratio",
+        ...     vary_param="water saving irrigation efficiency ratio",
         ...     time_range=(2020, 2100)
         ... )
         >>> # Result: rows=years, columns=[0.8, 0.9, 1.0] (different irrigation efficiencies)

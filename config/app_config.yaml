@@ -51,7 +51,7 @@ terminology:
 
   # Irrigation efficiency
   irrigation_efficiency:
-    internal: "water-saving irrigation efficiency ratio"
+    internal: "water saving irrigation efficiency ratio"
     display_en: "Irrigation Efficiency"
     display_cn: "灌溉效率"
     description_en: "Water-saving irrigation technology efficiency"

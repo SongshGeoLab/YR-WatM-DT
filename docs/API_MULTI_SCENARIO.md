@@ -117,7 +117,7 @@ aggregate=false"
         "Fertility Variation": 1.7,
         "Diet change scenario switch": 1,
         "Ecological water flow variable": 0.2,
-        "water-saving irrigation efficiency ratio": 0.8,
+        "water saving irrigation efficiency ratio": 0.8,
         "fire generation share province target": 0.1
       },
       "series": {

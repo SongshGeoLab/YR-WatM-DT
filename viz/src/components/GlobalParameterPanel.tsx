@@ -327,7 +327,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
                 step={0.05}
                 defaultValue={parameters.irrigationEfficiency || 0.85}
                 unit=""
-                description={parameters.irrigationEfficiency === null ? "Any value (Multiple scenarios)" : "Water-saving irrigation efficiency ratio"}
+                description={parameters.irrigationEfficiency === null ? "Any value (Multiple scenarios)" : "water saving irrigation efficiency ratio"}
                 onChange={(value) => updateParameter('irrigationEfficiency', value)}
                 disabled={parameters.irrigationEfficiency === null}
               />

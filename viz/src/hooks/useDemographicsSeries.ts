@@ -93,7 +93,7 @@ export function useDemographicsSeries(fertility: number, diet: number): Demograp
         const values = {
           "Fertility Variation": fertility,
           "Diet change scenario switch": diet,
-          "water-saving irrigation efficiency ratio": params["water-saving irrigation efficiency ratio"][1],
+          "water saving irrigation efficiency ratio": params["water saving irrigation efficiency ratio"][1],
           "fire generation share province target": params["fire generation share province target"][1],
           "Ecological water flow variable": params["Ecological water flow variable"][1],
           "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][1]

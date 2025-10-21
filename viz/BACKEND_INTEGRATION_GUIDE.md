@@ -66,7 +66,7 @@ const loadData = useCallback(async () => {
     const values: api.ParameterValues = {
       "Your Parameter Name": parameterValue,
       "Fertility Variation": params["Fertility Variation"][0],
-      "water-saving irrigation efficiency ratio": params["water-saving irrigation efficiency ratio"][0],
+      "water saving irrigation efficiency ratio": params["water saving irrigation efficiency ratio"][0],
       "fire generation share province target": params["fire generation share province target"][0],
       "Climate change scenario switch for water yield": params["Climate change scenario switch for water yield"][0],
       "Diet change scenario switch": params["Diet change scenario switch"][0]
@@ -308,7 +308,7 @@ const parameterConfigs = {
     default: 1.6
   },
   irrigation: {
-    name: "water-saving irrigation efficiency ratio",
+    name: "water saving irrigation efficiency ratio",
     values: [0.8, 0.85, 0.9, 0.95, 1.0],
     default: 0.8
   },

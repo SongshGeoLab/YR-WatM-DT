@@ -125,7 +125,7 @@ Returns parameter names and their unique values.
 ```json
 {
   "Fertility Variation": [1.6, 1.7, 1.8],
-  "water-saving irrigation efficiency ratio": [0.8, 0.9, 1.0],
+  "water saving irrigation efficiency ratio": [0.8, 0.9, 1.0],
   ...
 }
 ```
@@ -137,7 +137,7 @@ Resolve scenario name from parameter values.
 {
   "values": {
     "Fertility Variation": 1.6,
-    "water-saving irrigation efficiency ratio": 0.8,
+    "water saving irrigation efficiency ratio": 0.8,
     ...
   }
 }
@@ -555,7 +555,7 @@ data = query.get_series(
 comparison = compare_params(
     variable="YRB WSI",
     fixed_params={"Fertility Variation": 1.6, "Diet change scenario switch": 1},
-    vary_param="water-saving irrigation efficiency ratio",
+    vary_param="water saving irrigation efficiency ratio",
     time_range=(2020, 2100)
 )
 # Result: rows=time, columns=parameter values (0.8, 0.9, 1.0)
