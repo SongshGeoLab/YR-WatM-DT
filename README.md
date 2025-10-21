@@ -430,6 +430,17 @@ npm run dev
 - Features: Slider controls, variable switching, dark mode, real-time updates
 - Check browser Console for API logs and Network tab for `/resolve_scenario` calls
 
+### 5. Deploy to Production
+```bash
+# Build frontend first
+cd viz && npm run build && cd ..
+
+# Deploy to server
+./deploy-v2.sh
+```
+
+> ⚠️ **部署注意事项**: 如果部署后浏览器显示旧版本，请查看 [Deployment Best Practices](#-deployment-best-practices) 章节了解如何诊断和修复！
+
 ---
 
 ## Workflow for Design Iteration
@@ -541,6 +552,132 @@ Install: `cd viz && npm install`
 
 ### CORS errors
 Backend already allows all origins (`allow_origins=["*"]`). If still blocked, check browser console for exact error.
+
+---
+
+## 🚨 Deployment Best Practices
+
+> **重要**: 如果你更新了代码但远端网站没有变化，请参考本章节！
+
+### 快速诊断和修复
+
+如果远端部署后浏览器显示的还是旧版本：
+
+```bash
+# 1. 运行诊断脚本（自动检查所有可能的问题）
+./diagnose-deployment.sh
+
+# 2. 运行修复脚本（自动修复常见问题）
+./fix-deployment.sh
+```
+
+### ⚠️ 常见错误：Docker 镜像缓存导致更新不生效
+
+**症状**：
+- 已经运行了 `deploy-v2.sh`
+- 服务器上的文件已更新
+- 浏览器（包括无痕模式）显示的还是旧版本
+
+**根本原因**：
+1. **Dockerfile 配置**: 项目使用 `Dockerfile.frontend`，它会在 Docker 容器内从源代码重新构建前端
+2. **缓存机制**: Docker 可能使用缓存层，导致新代码没有被打包进镜像
+3. **源代码未更新**: 如果服务器上的源代码是旧的，即使重新构建也会生成旧版本
+
+**正确的部署流程**：
+
+```bash
+# 方法 1: 使用修复后的部署脚本（推荐）
+./deploy-v2.sh  # 现在会自动上传源代码
+
+# 如果上面的方法不生效，使用强制修复脚本
+./fix-deployment.sh
+
+# 方法 2: 手动强制重建（适用于紧急情况）
+ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && \
+  docker compose down && \
+  docker compose build --no-cache frontend && \
+  docker compose up -d'
+```
+
+### 🔍 验证更新是否成功
+
+**检查文件 Hash（推荐）**：
+```bash
+# 本地构建的 JS 文件名
+grep -o 'src="[^"]*\.js"' viz/build/index.html | grep "/assets/"
+
+# 远端服务器返回的 JS 文件名
+curl -s http://43.165.1.18/ | grep -o 'src="[^"]*\.js"' | grep "/assets/"
+
+# 两者的 hash（文件名中的随机字符串）应该一致
+# 例如: index-DpJTYsGo.js
+```
+
+**浏览器验证**：
+1. 访问 http://43.165.1.18
+2. 按 `Cmd+Shift+R` (macOS) 或 `Ctrl+Shift+R` (Windows) 强制刷新
+3. 打开开发者工具 (F12) → Network 标签
+4. 查看加载的 JS 文件名，确认 hash 值是否是新的
+
+### 📝 关键注意事项
+
+1. **本地必须先构建前端**：
+   ```bash
+   cd viz
+   npm run build
+   cd ..
+   ```
+
+2. **Docker 使用源代码构建**：项目的 `Dockerfile.frontend` 会在容器内重新构建，所以必须上传最新的源代码，而不仅仅是构建产物。
+
+3. **使用 --no-cache 标志**：如果怀疑 Docker 使用了缓存，使用 `--no-cache` 强制重建：
+   ```bash
+   docker compose build --no-cache frontend
+   ```
+
+4. **检查服务器上的源代码时间**：
+   ```bash
+   ssh ubuntu@43.165.1.18 'ls -lh /home/ubuntu/watm-dt/viz/src/App.tsx'
+   ```
+   确认文件修改时间是最新的。
+
+### 🛠️ 故障排查工具
+
+项目提供了完整的诊断和修复工具：
+
+- **`diagnose-deployment.sh`**: 自动诊断所有可能的问题（不做修改）
+- **`fix-deployment.sh`**: 自动修复常见的部署问题
+- **`TROUBLESHOOTING_DEPLOYMENT.md`**: 详细的故障排查文档
+
+### 🎯 为什么会出现这个问题？
+
+项目使用的是**多阶段构建**的 Dockerfile：
+
+```dockerfile
+# Dockerfile.frontend
+FROM node:18-alpine AS builder
+COPY viz/ ./          # 复制源代码
+RUN npm run build     # 在容器内构建
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+```
+
+**优点**：
+- 最终镜像很小（只包含构建产物）
+- 构建环境和运行环境分离
+- 不需要在服务器上安装 Node.js
+
+**缺点**：
+- 必须上传源代码（不能只上传构建产物）
+- Docker 缓存可能导致更新不生效
+- 需要使用 `--no-cache` 确保完全重建
+
+### 📚 相关文档
+
+- 部署指南: [DEPLOY.md](DEPLOY.md)
+- 详细故障排查: [TROUBLESHOOTING_DEPLOYMENT.md](TROUBLESHOOTING_DEPLOYMENT.md)
+- 完整部署文档: [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)
 
 ---
 

@@ -67,20 +67,22 @@ rsync -avz --progress --delete \
     src/ \
     $USERNAME@$SERVER_IP:$SERVER_PATH/src/
 
-# 上传前端构建文件（如果已构建）
+# 上传前端源代码（Docker 构建需要）
+echo "📤 上传前端源代码..."
+rsync -avz --progress --delete \
+    --exclude='node_modules' \
+    --exclude='.vite' \
+    --exclude='dist' \
+    --exclude='build' \
+    viz/ \
+    $USERNAME@$SERVER_IP:$SERVER_PATH/viz/
+
+# 可选：也上传构建文件（如果已构建，可用于快速回滚）
 if [ -d "viz/build" ]; then
-    echo "📤 上传前端构建文件..."
+    echo "📤 上传前端构建文件（备用）..."
     rsync -avz --progress --delete \
         viz/build/ \
         $USERNAME@$SERVER_IP:$SERVER_PATH/viz/build/
-else
-    echo "⚠️  前端未构建，将上传源代码..."
-    rsync -avz --progress --delete \
-        --exclude='node_modules' \
-        --exclude='.vite' \
-        --exclude='dist' \
-        viz/ \
-        $USERNAME@$SERVER_IP:$SERVER_PATH/viz/
 fi
 
 # 检查数据文件是否需要上传
@@ -148,4 +150,3 @@ echo "   查看日志: ssh $USERNAME@$SERVER_IP 'cd $SERVER_PATH && docker compo
 echo "   重启服务: ssh $USERNAME@$SERVER_IP 'cd $SERVER_PATH && docker compose restart'"
 echo "   停止服务: ssh $USERNAME@$SERVER_IP 'cd $SERVER_PATH && docker compose down'"
 echo "   查看状态: ssh $USERNAME@$SERVER_IP 'cd $SERVER_PATH && docker compose ps'"
-
