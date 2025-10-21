@@ -55,6 +55,11 @@ def process_excel_to_parquet(excel_file, output_dir, variable_name):
         if year_col != "Year":
             df_long = df_long.rename({year_col: "Year"})
 
+        # Remove _corrected suffix for consistency (some Excel files have it, some don't)
+        df_long = df_long.with_columns(
+            pl.col("Scenario").str.replace("_corrected", "").alias("Scenario")
+        )
+
         # Cast all numeric columns to Float32 to reduce file size
         df_long = df_long.with_columns(
             [
@@ -98,6 +103,7 @@ def main():
         "ET0": data_dir / "ET0_all.xlsx",
         "ETc": data_dir / "ETc_all.xlsx",
         "IWR": data_dir / "IWR" / "IWR_all.xlsx",
+        "tas": data_dir / "tas_all.xlsx",  # Temperature data
     }
 
     all_dataframes = []

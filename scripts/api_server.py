@@ -860,7 +860,7 @@ def get_climate_data():
 
         # Process precipitation data
         pe_processed = {}
-        for scenario in ["ssp126_corrected", "ssp245_corrected", "ssp585_corrected"]:
+        for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in pe_df["Scenario"].values:
                 scenario_data = pe_df[pe_df["Scenario"] == scenario]
                 # Filter out invalid values (NaN, inf, -inf)
@@ -879,7 +879,7 @@ def get_climate_data():
 
         # Process temperature data
         tas_processed = {}
-        for scenario in ["ssp126_corrected", "ssp245_corrected", "ssp585_corrected"]:
+        for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in tas_df["Scenario"].values:
                 scenario_data = tas_df[tas_df["Scenario"] == scenario]
                 # Filter out invalid values (NaN, inf, -inf)
