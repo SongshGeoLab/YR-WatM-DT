@@ -85,9 +85,9 @@ export const useClimateComparison = (snwtpEnabled: boolean): ClimateComparisonDa
 
         // Map climate scenario to SSP scenario
         const scenarioMapping: Record<number, string> = {
-          1: 'ssp126_corrected',
-          2: 'ssp245_corrected',
-          3: 'ssp585_corrected'
+          1: 'ssp126',
+          2: 'ssp245',
+          3: 'ssp585'
         };
 
         const selectedScenario = scenarioMapping[parameters.climateScenario || 2];

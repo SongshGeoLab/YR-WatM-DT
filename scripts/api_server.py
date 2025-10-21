@@ -877,11 +877,14 @@ def get_climate_data():
                     "values": valid_data["Value"].tolist(),
                 }
 
-        # Process temperature data
+        # Process temperature data (use only average temperature: taxavg)
         tas_processed = {}
         for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in tas_df["Scenario"].values:
-                scenario_data = tas_df[tas_df["Scenario"] == scenario]
+                scenario_data = tas_df[
+                    (tas_df["Scenario"] == scenario) & 
+                    (tas_df["CropType"] == "taxavg")  # Only use average temperature
+                ]
                 # Filter out invalid values (NaN, inf, -inf)
                 valid_data = scenario_data.dropna()
                 valid_data = valid_data[

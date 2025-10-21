@@ -183,9 +183,9 @@ export default function WaterAvailabilityPage() {
 
     // Map API scenario names to display names
     const scenarioMapping = {
-      'ssp126_corrected': 'RCP2.6-SSP1',
-      'ssp245_corrected': 'RCP4.5-SSP2',
-      'ssp585_corrected': 'RCP8.5-SSP5'
+      'ssp126': 'RCP2.6-SSP1',
+      'ssp245': 'RCP4.5-SSP2',
+      'ssp585': 'RCP8.5-SSP5'
     };
 
     const processed = {
