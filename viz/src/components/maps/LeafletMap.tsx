@@ -117,7 +117,13 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
         // Critical: Force map to recognize its size immediately after initialization
         // This ensures tiles load correctly on first render
         setTimeout(() => {
-          map.invalidateSize(true);
+          try {
+            if (map && map._container && map._loaded) {
+              map.invalidateSize(true);
+            }
+          } catch (e) {
+            console.warn('Could not invalidate size during initialization:', e);
+          }
         }, 100);
 
         // Load Yellow River Basin boundary
@@ -144,15 +150,21 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           // Add basin layer to overlay group to ensure it stays visible
           basinLayer.addTo(map._overlayGroup);
 
-          // Fit map to basin bounds
+          // Fit map to basin bounds - with safety check
           if (basinLayer.getBounds().isValid()) {
             const bounds = basinLayer.getBounds();
-            map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-
-            // Invalidate size after fitting bounds to ensure proper tile loading
+            // Ensure map container is ready before fitting bounds
             setTimeout(() => {
-              map.invalidateSize(true);
-            }, 100);
+              if (map && map._container && map._loaded) {
+                try {
+                  map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
+                  map.invalidateSize(true);
+                } catch (e) {
+                  console.warn('Could not fit bounds, using default view:', e);
+                  map.setView([35.0, 110.0], 6);
+                }
+              }
+            }, 150);
           }
         } catch (basinError) {
           console.error('Failed to load Yellow River Basin data:', basinError);
@@ -163,7 +175,13 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
 
         // Final size check after loading completes
         setTimeout(() => {
-          map.invalidateSize(true);
+          try {
+            if (map && map._container && map._loaded) {
+              map.invalidateSize(true);
+            }
+          } catch (e) {
+            console.warn('Could not invalidate size after loading:', e);
+          }
         }, 200);
 
       } catch (err) {

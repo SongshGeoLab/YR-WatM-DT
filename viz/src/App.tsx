@@ -9,7 +9,7 @@ import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPag
 import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
 import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
 import AgriculturePage from './components/pages/AgriculturePage';
-import RiverAnalysisPage from './components/pages/RiverAnalysisPage';
+import WaterQualityPage from './components/pages/WaterQualityPage';
 
 // Import global state management
 import { ScenarioProvider, useScenario } from './contexts/ScenarioContext';
@@ -61,7 +61,7 @@ function AppInner() {
     { name: 'Ecological Water', icon: TreePine, color: 'green' },
     { name: 'Agriculture', icon: Sprout, color: 'orange' },
     { name: 'WSI Focus', icon: Gauge, color: 'red' },
-    { name: 'Water Quality', icon: Activity, color: 'indigo' }
+    { name: 'Water Stress', icon: Activity, color: 'indigo' }
   ];
 
   const renderPage = () => {
@@ -72,7 +72,7 @@ function AppInner() {
       case 3: return <EcologicalWaterPageSlider />;
       case 4: return <WaterDemandPageWithRealData />;
       case 5: return <WaterStressIndexPage />;
-      case 6: return <RiverAnalysisPage />;
+      case 6: return <WaterQualityPage />;
       default: return <StudyAreaPage />;
     }
   };

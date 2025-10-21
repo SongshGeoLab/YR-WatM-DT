@@ -97,6 +97,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [availableParams, setAvailableParams] = useState<Record<string, number[]> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
 
   // Fetch available parameters from backend on mount
   useEffect(() => {
@@ -125,7 +126,13 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (isResolving) {
+      console.log('⏳ Already resolving scenarios, skipping...');
+      return;
+    }
+
     try {
+      setIsResolving(true);
       setLoading(true);
       setError(null);
 
@@ -250,23 +257,33 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       setScenarioResult(null);
     } finally {
       setLoading(false);
+      setIsResolving(false);
     }
   }, [parameters, availableParams]);
 
   // Auto-resolve scenarios when parameters change
   useEffect(() => {
-    resolveScenarios();
-  }, [resolveScenarios]);
+    if (availableParams) {
+      resolveScenarios();
+    }
+  }, [parameters, availableParams, resolveScenarios]);
 
   /**
    * Update a single parameter
    */
   const updateParameter = useCallback((key: keyof ScenarioParameters, value: number | null) => {
     console.log(`🔧 Updating parameter: ${key} = ${value}`);
-    setParameters(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setParameters(prev => {
+      // Skip update if value hasn't changed
+      if (prev[key] === value) {
+        console.log(`⏭️ Skipping parameter update - value unchanged: ${key} = ${value}`);
+        return prev;
+      }
+      return {
+        ...prev,
+        [key]: value
+      };
+    });
   }, []);
 
   /**
@@ -449,7 +466,7 @@ export function useScenarioSeries(
     return () => {
       cancelled = true;
     };
-  }, [scenarioResult, variable, options?.start_step, options?.end_step]);
+  }, [scenarioResult, variable, options?.start_step, options?.end_step, parameters]);
 
   return { data, loading, error };
 }
