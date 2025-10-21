@@ -353,7 +353,7 @@ export function parametersToFilters(parameters: {
     filters['Ecological water flow variable'] = parameters.ecologicalFlow;
   }
   if (parameters.irrigationEfficiency !== null) {
-    filters['water saving irrigation efficiency ratio'] = parameters.irrigationEfficiency;
+    filters['water-saving irrigation efficiency ratio'] = parameters.irrigationEfficiency;
   }
   if (parameters.fireGenerationShare !== null) {
     filters['fire generation share province target'] = parameters.fireGenerationShare;

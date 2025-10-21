@@ -604,35 +604,28 @@ export default function WaterAvailabilityPage() {
               height="100%"
             />
           </div>
-          <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto">
-            <h4 className="font-semibold text-foreground mb-3">
-              {scenarios[selectedScenario].name}: Understanding the Scenario
-            </h4>
-            <div className="space-y-3 text-base text-foreground leading-relaxed">
-              <p>{scenarios[selectedScenario].description}</p>
-
-              {/* Data Comparison Panel */}
-              {comparisonData.loading ? (
-                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
-                  <div className="text-sm text-muted-foreground">Loading comparison data...</div>
-                </div>
-              ) : comparisonData.error ? (
-                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
-                  <div className="text-sm text-red-600">Error loading data: {comparisonData.error}</div>
-                </div>
-              ) : comparisonData.temperature && comparisonData.precipitation && comparisonData.waterAvailability ? (
-                <DataComparisonPanel
-                  temperature={comparisonData.temperature}
-                  precipitation={comparisonData.precipitation}
-                  waterAvailability={comparisonData.waterAvailability}
-                  className="mt-4"
-                />
-              ) : (
-                <div className="mt-4 p-6 bg-card rounded-lg border text-center">
-                  <div className="text-sm text-muted-foreground">No comparison data available</div>
-                </div>
-              )}
-            </div>
+          <div className="flex-1 min-h-0">
+            {/* Data Comparison Panel */}
+            {comparisonData.loading ? (
+              <div className="h-full p-6 bg-card rounded-lg border text-center flex items-center justify-center">
+                <div className="text-sm text-muted-foreground">Loading comparison data...</div>
+              </div>
+            ) : comparisonData.error ? (
+              <div className="h-full p-6 bg-card rounded-lg border text-center flex items-center justify-center">
+                <div className="text-sm text-red-600">Error loading data: {comparisonData.error}</div>
+              </div>
+            ) : comparisonData.temperature && comparisonData.precipitation && comparisonData.waterAvailability ? (
+              <DataComparisonPanel
+                temperature={comparisonData.temperature}
+                precipitation={comparisonData.precipitation}
+                waterAvailability={comparisonData.waterAvailability}
+                className="h-full"
+              />
+            ) : (
+              <div className="h-full p-6 bg-card rounded-lg border text-center flex items-center justify-center">
+                <div className="text-sm text-muted-foreground">No comparison data available</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
