@@ -170,3 +170,34 @@ version-info:
 	else \
 		echo "❌ CHANGELOG.md 未找到"; \
 	fi
+
+# Deployment commands
+.PHONY: deploy-check
+deploy-check:
+	@echo "🔍 运行部署前检查..."
+	@bash scripts/pre-deploy-check.sh
+
+.PHONY: deploy
+deploy:
+	@echo "🚀 开始部署到服务器..."
+	@bash deploy-v2.sh
+
+.PHONY: deploy-status
+deploy-status:
+	@echo "📊 检查服务器状态..."
+	@ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && docker compose ps'
+
+.PHONY: deploy-logs
+deploy-logs:
+	@echo "📋 查看服务器日志..."
+	@ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && docker compose logs --tail=100'
+
+.PHONY: deploy-restart
+deploy-restart:
+	@echo "🔄 重启服务器服务..."
+	@ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && docker compose restart'
+
+.PHONY: deploy-stop
+deploy-stop:
+	@echo "🛑 停止服务器服务..."
+	@ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && docker compose down'
