@@ -345,6 +345,34 @@ export default function DemographicsPageOptimized() {
     };
   }, [populationData, domesticData, oaData, scenarioResult]);
 
+  // Find peak year for domestic water demand
+  const peakYearInfo = useMemo(() => {
+    if (!domesticData?.series) return null;
+
+    const series = domesticData.series;
+    const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
+    const time = series.time;
+
+    if (!values || !time || values.length === 0 || time.length === 0) return null;
+
+    // Find peak value and corresponding year
+    let maxValue = values[0];
+    let peakYear = time[0];
+
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] > maxValue) {
+        maxValue = values[i];
+        peakYear = time[i];
+      }
+    }
+
+    return {
+      peakYear,
+      peakValue: maxValue,
+      method: scenarioResult?.isSingleScenario ? 'single scenario' : 'multi-scenario mean'
+    };
+  }, [domesticData, scenarioResult]);
+
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
       <div className="flex items-center gap-6 mb-6">
@@ -369,7 +397,7 @@ export default function DemographicsPageOptimized() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: 'calc(100vh - 8rem)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left side - Controls only */}
         <div className="space-y-4">
           <div className="text-foreground text-base leading-relaxed">
@@ -567,20 +595,52 @@ export default function DemographicsPageOptimized() {
               </p>
             </div>
           </div>
+
+          {/* Peak Year Information */}
+          {peakYearInfo && (
+            <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <Droplet className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="font-semibold text-green-900 dark:text-green-200">
+                  Peak Demand Analysis
+                </h4>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-700 dark:text-green-300">
+                    Peak Year:
+                  </span>
+                  <span className="font-bold text-green-900 dark:text-green-100">
+                    {Math.round(peakYearInfo.peakYear)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-700 dark:text-green-300">
+                    Peak Value:
+                  </span>
+                  <span className="font-bold text-green-900 dark:text-green-100">
+                    {peakYearInfo.peakValue.toFixed(2)}B m³
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-green-200 dark:border-green-700">
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Based on {peakYearInfo.method}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right side - Combined chart and OA chart */}
-        <div className="flex flex-col gap-4 h-full">
-          <div className="text-foreground text-base leading-relaxed flex-shrink-0">
-            <p>
-              Water consumption patterns vary significantly with demographic transitions.
-              <span className="font-medium">Lower fertility rates and dietary changes</span> can reduce
-              per capita water demand while urbanization may increase efficiency through improved infrastructure.
-            </p>
-          </div>
-
+        <div className="flex flex-col gap-6">
           {/* Combined Population & Domestic Water Chart */}
-          <div className="h-[400px]">
+          <div className="h-[350px]">
             {populationData && domesticData ? (
               <PopulationDomesticChart
                 populationData={populationData}
@@ -596,7 +656,7 @@ export default function DemographicsPageOptimized() {
           </div>
 
           {/* OA Water Chart */}
-          <div className="h-[400px]">
+          <div className="h-[300px]">
             {oaData ? (
               <DemographicsChartWithCI
                 data={oaData}
