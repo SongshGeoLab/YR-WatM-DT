@@ -3,7 +3,7 @@ import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import { ParameterSlider } from '../ui/parameter-slider';
-import { Gauge, TreePine } from 'lucide-react';
+import { Gauge, TreePine, BarChart3, Droplets } from 'lucide-react';
 import WaterCompositionComparisonPanel from '../WaterCompositionComparisonPanel';
 import { useWaterCompositionComparison } from '../../hooks/useWaterCompositionComparison';
 import * as api from '../../services/api';
@@ -78,7 +78,8 @@ const WaterCompositionTreeChart = React.memo(({
       },
       textinfo: 'label+value+percent',
       textfont: { size: 12, color: 'white' },
-      hovertemplate: '<b>%{label}</b><br>Value: %{value:.2e}<br>Percentage: %{percent:.1%}<extra></extra>',
+      hovertemplate: '<b>%{label}</b><br>Value: %{value:.2e}<br>Percentage: %{customdata}<extra></extra>',
+      customdata: filteredValues.map(val => `${((val / totalValue) * 100).toFixed(1)}%`),
       branchvalues: 'total'
     }];
   }, [irrigationData, productionData, oaData, domesticData, scenarioResult]);
@@ -264,6 +265,34 @@ export default function WaterStressIndexPage() {
   // Get comparison data
   const comparisonData = useWaterCompositionComparison();
 
+  // Find peak year for total water demand
+  const peakYearInfo = useMemo(() => {
+    if (!totalWaterData?.series) return null;
+
+    const series = totalWaterData.series;
+    const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
+    const time = series.time;
+
+    if (!values || !time || values.length === 0 || time.length === 0) return null;
+
+    // Find peak value and corresponding year
+    let maxValue = values[0];
+    let peakYear = time[0];
+
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] > maxValue) {
+        maxValue = values[i];
+        peakYear = time[i];
+      }
+    }
+
+    return {
+      peakYear,
+      peakValue: maxValue,
+      method: scenarioResult?.isSingleScenario ? 'single scenario' : 'multi-scenario mean'
+    };
+  }, [totalWaterData, scenarioResult]);
+
   // Loading state
   const isLoading = irrigationLoading || productionLoading || oaLoading || domesticLoading || totalWaterLoading;
   const hasError = irrigationError || productionError || oaError || domesticError || totalWaterError;
@@ -324,31 +353,69 @@ export default function WaterStressIndexPage() {
         </div>
 
         {/* Fire Generation Share Parameter */}
-        <div className="space-y-3">
-          {fireGenerationShare !== null ? (
-            <ParameterSlider
-              label="Fire Generation Share Province Target (Global)"
-              min={parameterRanges.fire?.min || 0.1}
-              max={parameterRanges.fire?.max || 0.4}
-              step={parameterRanges.fire?.step || 0.01}
-              defaultValue={fireGenerationShare}
-              unit=""
-              description="Target share of thermal power generation - affects all pages"
-              onChange={(v) => updateParameter('fireGenerationShare', v)}
-            />
-          ) : (
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Fire Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
-              </p>
-              <button
-                onClick={() => updateParameter('fireGenerationShare', 0.25)}
-                className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                Set to 0.25
-              </button>
-            </div>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            {fireGenerationShare !== null ? (
+              <ParameterSlider
+                label="Fire Generation Share Province Target (Global)"
+                min={parameterRanges.fire?.min || 0.1}
+                max={parameterRanges.fire?.max || 0.4}
+                step={parameterRanges.fire?.step || 0.01}
+                defaultValue={fireGenerationShare}
+                unit=""
+                description="Target share of thermal power generation - affects all pages"
+                onChange={(v) => updateParameter('fireGenerationShare', v)}
+              />
+            ) : (
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Fire Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+                </p>
+                <button
+                  onClick={() => updateParameter('fireGenerationShare', 0.25)}
+                  className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  Set to 0.25
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Peak Monitor */}
+          <div>
+            {peakYearInfo && (
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 h-full">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                    <BarChart3 className="w-3 h-3 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-green-900 dark:text-green-200 text-sm">
+                    Peak Analysis
+                  </h4>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-green-700 dark:text-green-300">Year:</span>
+                    <span className="font-bold text-green-900 dark:text-green-100 text-sm">
+                      {Math.round(peakYearInfo.peakYear)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-green-700 dark:text-green-300">Value:</span>
+                    <span className="font-bold text-green-900 dark:text-green-100 text-sm">
+                      {peakYearInfo.peakValue.toFixed(1)}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    ×10⁸ m³
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -398,11 +465,12 @@ export default function WaterStressIndexPage() {
           <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
             <p className="text-red-600">Error loading data: {comparisonData.error}</p>
           </div>
-        ) : comparisonData.irrigation && comparisonData.production && comparisonData.domestic ? (
+        ) : comparisonData.irrigation && comparisonData.production && comparisonData.domestic && comparisonData.oa ? (
             <WaterCompositionComparisonPanel
               irrigation={comparisonData.irrigation}
               production={comparisonData.production}
               domestic={comparisonData.domestic}
+              oa={comparisonData.oa}
               className="h-[200px]"
             />
         ) : (

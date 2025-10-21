@@ -62,6 +62,31 @@ const WaterStressIndexChart = React.memo(({
       hovertemplate: 'Year: %{x}<br>Water Stress Index: %{y:.3f}<extra></extra>'
     });
 
+    // Add threshold reference lines
+    // Low Stress threshold (<0.4)
+    traces.push({
+      x: [series.time[0], series.time[series.time.length - 1]],
+      y: [0.4, 0.4],
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#10b981', width: 2, dash: 'dash' },
+      name: 'Low Stress Threshold (<0.4)',
+      hovertemplate: 'Low Stress Threshold: 0.4<br>Water resources abundant<extra></extra>',
+      showlegend: true
+    });
+
+    // High Stress threshold (>0.6)
+    traces.push({
+      x: [series.time[0], series.time[series.time.length - 1]],
+      y: [0.6, 0.6],
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#ef4444', width: 2, dash: 'dash' },
+      name: 'High Stress Threshold (>0.6)',
+      hovertemplate: 'High Stress Threshold: 0.6<br>Critical water scarcity risk<extra></extra>',
+      showlegend: true
+    });
+
     return traces;
   }, [data, scenarioResult]);
 
@@ -78,11 +103,18 @@ const WaterStressIndexChart = React.memo(({
       title: 'Water Stress Index',
       titlefont: { size: 14 },
       tickfont: { size: 12 },
-      range: [0, 1],
+      range: [0, 1], // Fixed Y-axis range
       dtick: 0.2
     },
     hovermode: 'x unified',
-    showlegend: false,
+    showlegend: true, // Enable legend to show threshold lines
+    legend: {
+      x: 0.02,
+      y: 0.02, // Move legend to bottom left
+      bgcolor: 'rgba(255,255,255,0.8)',
+      bordercolor: 'rgba(0,0,0,0.2)',
+      borderwidth: 1
+    },
     autosize: true
   }), []);
 
@@ -243,19 +275,19 @@ export default function WaterQualityPage() {
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-500 rounded"></div>
                 <span className="text-sm text-foreground">
-                  <span className="font-medium">Low Stress (&lt;0.2)</span>: Water resources abundant
+                  <span className="font-medium">Low Stress (&lt;0.4)</span>: Water resources abundant
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-yellow-500 rounded"></div>
                 <span className="text-sm text-foreground">
-                  <span className="font-medium">Moderate Stress (0.2-0.4)</span>: Monitoring recommended
+                  <span className="font-medium">Moderate Stress (0.4-0.6)</span>: Monitoring recommended
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-500 rounded"></div>
                 <span className="text-sm text-foreground">
-                  <span className="font-medium">High Stress (&gt;0.4)</span>: Critical water scarcity risk
+                  <span className="font-medium">High Stress (&gt;0.6)</span>: Critical water scarcity risk
                 </span>
               </div>
             </div>

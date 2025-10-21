@@ -389,10 +389,7 @@ export default function StudyAreaPage() {
         </div>
 
         {/* Historical Data Section */}
-        <div className="border-t-2 border-dashed border-border pt-8">
-          <div className="mb-4">
-            <h3 className="font-semibold text-foreground text-lg mb-2">Historical Trends</h3>
-          </div>
+        <div className="border-t-2 border-dashed border-border pt-8 mt-12">
           <HistoricalDataViewer onYearChange={setCurrentYear} />
         </div>
       </div>

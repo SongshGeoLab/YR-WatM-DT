@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from './ui/card';
-import { TrendingUp, TrendingDown, Droplets, Factory, Home, Building } from 'lucide-react';
+import { TrendingUp, TrendingDown, Droplets, Factory, Home, Building, Fish } from 'lucide-react';
 
 interface ComparisonData {
   now: number;
@@ -13,6 +13,7 @@ interface WaterCompositionComparisonPanelProps {
   irrigation: ComparisonData;
   production: ComparisonData;
   domestic: ComparisonData;
+  oa: ComparisonData;
   className?: string;
 }
 
@@ -20,6 +21,7 @@ const WaterCompositionComparisonPanel: React.FC<WaterCompositionComparisonPanelP
   irrigation,
   production,
   domestic,
+  oa,
   className = ''
 }) => {
   const formatValue = (value: number, unit: string, decimals: number = 1) => {
@@ -94,7 +96,7 @@ const WaterCompositionComparisonPanel: React.FC<WaterCompositionComparisonPanelP
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+      <div className="grid grid-cols-4 gap-3 flex-1">
         <MetricCard
           title="Irrigation"
           icon={<Droplets className="w-5 h-5 text-white" />}
@@ -118,6 +120,15 @@ const WaterCompositionComparisonPanel: React.FC<WaterCompositionComparisonPanelP
           icon={<Home className="w-5 h-5 text-white" />}
           iconColor="bg-red-500"
           data={domestic}
+          unit="×10⁸ m³"
+          decimals={1}
+        />
+
+        <MetricCard
+          title="Livestock & Fisheries"
+          icon={<Fish className="w-5 h-5 text-white" />}
+          iconColor="bg-purple-500"
+          data={oa}
           unit="×10⁸ m³"
           decimals={1}
         />

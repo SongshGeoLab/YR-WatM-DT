@@ -90,23 +90,21 @@ export function HistoricalDataViewer({ onYearChange }: HistoricalDataViewerProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 space-y-6">
       {/* Time Slider */}
-      <div className="bg-card rounded-lg border-2 border-dashed border-border p-4">
-        <div className="relative">
-          <input
-            type="range"
-            min="0"
-            max={data.interpolated_data.years.length - 1}
-            step="1"
-            value={currentYearIndex}
-            onChange={(e) => setCurrentYearIndex(Number(e.target.value))}
-            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>{data.metadata.common_range[0]} CE</span>
-            <span>{data.metadata.common_range[1]} CE</span>
-          </div>
+      <div className="relative">
+        <input
+          type="range"
+          min="0"
+          max={data.interpolated_data.years.length - 1}
+          step="1"
+          value={currentYearIndex}
+          onChange={(e) => setCurrentYearIndex(Number(e.target.value))}
+          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <span>{data.metadata.common_range[0]} CE</span>
+          <span>{data.metadata.common_range[1]} CE</span>
         </div>
       </div>
 

@@ -146,24 +146,20 @@ const EcologicalWaterChart = ({ data, snwtpEnabled, ecoFlowValue }: {
         },
         xaxis: {
           title: 'Year',
-          range: [2020, 2100],
-          gridcolor: isDarkMode() ? '#374151' : '#e5e7eb'
+          range: [2020, 2100]
         },
         yaxis: {
           title: 'Ecological Water (km³)',
-          range: [10, 40],
-          gridcolor: isDarkMode() ? '#374151' : '#e5e7eb'
+          range: [10, 40]
         },
         plot_bgcolor: 'transparent',
         paper_bgcolor: 'transparent',
-        font: { color: isDarkMode() ? '#f9fafb' : '#111827' },
         hovermode: 'x unified',
         legend: {
           yanchor: 'top',
           y: 0.99,
           xanchor: 'left',
-          x: 0.01,
-          bgcolor: isDarkMode() ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)'
+          x: 0.01
         }
       }}
       config={{ responsive: true, displaylogo: false }}
