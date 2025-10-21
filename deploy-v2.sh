@@ -102,7 +102,18 @@ if [ "$DATA_FILES_EXIST" = "no" ]; then
         echo "⚠️  跳过数据文件上传，请确保服务器上已有数据文件"
     fi
 else
-    echo "✅ 服务器上已有数据文件，跳过上传"
+    echo "✅ 服务器上已有数据文件"
+    read -p "是否要重新上传数据文件？(会覆盖服务器上的旧数据) (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "📤 重新上传数据文件（删除旧文件）..."
+        rsync -avz --progress --delete \
+            data_parquet/ \
+            $USERNAME@$SERVER_IP:$SERVER_PATH/data_parquet/
+        echo "✅ 数据文件已更新"
+    else
+        echo "⏭️  跳过数据文件上传，使用服务器上的现有数据"
+    fi
 fi
 
 # 检查 Docker 环境
