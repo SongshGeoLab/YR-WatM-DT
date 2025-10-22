@@ -342,6 +342,10 @@ export function parametersToFilters(parameters: {
 
   if (parameters.climateScenario !== null) {
     filters['Climate change scenario switch for water yield'] = parameters.climateScenario;
+  } else {
+    // When climateScenario is null (Any), only consider RCP2.6 and RCP4.5 (values 1 and 2)
+    // Exclude RCP8.5 (value 3) due to data quality issues
+    filters['Climate change scenario switch for water yield'] = [1, 2];
   }
   if (parameters.fertility !== null) {
     filters['Fertility Variation'] = parameters.fertility;

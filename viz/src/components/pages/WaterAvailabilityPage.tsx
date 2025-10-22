@@ -160,7 +160,7 @@ export default function WaterAvailabilityPage() {
       bgColor: 'bg-gray-50',
       borderColor: 'border-gray-200',
       textColor: 'text-gray-900',
-      description: 'Aggregated results from all climate scenarios'
+      description: 'Aggregated results from RCP2.6 and RCP4.5 scenarios'
     },
     'RCP2.6': {
       name: 'RCP2.6',
@@ -180,15 +180,6 @@ export default function WaterAvailabilityPage() {
       textColor: 'text-amber-900',
       description: 'Traditional industries coexist with green technologies, gradual renewable energy adoption'
     },
-    'RCP8.5': {
-      name: 'RCP8.5',
-      title: 'Focusing on Economic Development',
-      color: '#ef4444',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      textColor: 'text-red-900',
-      description: 'High fossil fuel dependence with rapid economic growth but inefficient water resource use'
-    }
   };
 
   // Process real climate data from API
@@ -276,33 +267,77 @@ export default function WaterAvailabilityPage() {
   const tempPrecipData = useMemo(() => {
     if (!processedClimateData) return [];
 
-    const scenarioKey = selectedScenario.toLowerCase().replace('.', '') as keyof typeof processedClimateData;
-    const selectedData = processedClimateData[scenarioKey];
+    if (selectedScenario === 'Any') {
+      // Calculate average of RCP2.6 and RCP4.5 for "Any" scenario
+      const rcp26Data = processedClimateData.rcp26;
+      const rcp45Data = processedClimateData.rcp45;
 
-    if (!selectedData || !selectedData.temp.years || !selectedData.precip.years) return [];
+      if (!rcp26Data || !rcp45Data ||
+          !rcp26Data.temp.years || !rcp26Data.precip.years ||
+          !rcp45Data.temp.years || !rcp45Data.precip.years) return [];
 
-    return [
-      {
-        type: 'scatter',
-        mode: 'lines',
-        x: selectedData.temp.years,
-        y: selectedData.temp.values,
-        name: 'Temperature',
-        yaxis: 'y',
-        line: { color: '#ef4444', width: 3 },
-        hovertemplate: '<b>Temperature</b><br>Year: %{x}<br>Value: %{y:.2f}°C<extra></extra>'
-      },
-      {
-        type: 'scatter',
-        mode: 'lines',
-        x: selectedData.precip.years,
-        y: selectedData.precip.values,
-        name: 'Precipitation',
-        yaxis: 'y2',
-        line: { color: '#3b82f6', width: 3 },
-        hovertemplate: '<b>Precipitation</b><br>Year: %{x}<br>Value: %{y:.1f} mm<extra></extra>'
-      }
-    ];
+      // Calculate average temperature
+      const avgTempValues = rcp26Data.temp.values.map((val: number, idx: number) =>
+        (val + rcp45Data.temp.values[idx]) / 2
+      );
+
+      // Calculate average precipitation
+      const avgPrecipValues = rcp26Data.precip.values.map((val: number, idx: number) =>
+        (val + rcp45Data.precip.values[idx]) / 2
+      );
+
+      return [
+        {
+          type: 'scatter',
+          mode: 'lines',
+          x: rcp26Data.temp.years,
+          y: avgTempValues,
+          name: 'Temperature (Avg)',
+          yaxis: 'y',
+          line: { color: '#ef4444', width: 3 },
+          hovertemplate: '<b>Temperature (Avg)</b><br>Year: %{x}<br>Value: %{y:.2f}°C<extra></extra>'
+        },
+        {
+          type: 'scatter',
+          mode: 'lines',
+          x: rcp26Data.precip.years,
+          y: avgPrecipValues,
+          name: 'Precipitation (Avg)',
+          yaxis: 'y2',
+          line: { color: '#3b82f6', width: 3 },
+          hovertemplate: '<b>Precipitation (Avg)</b><br>Year: %{x}<br>Value: %{y:.1f} mm<extra></extra>'
+        }
+      ];
+    } else {
+      // Single scenario mode
+      const scenarioKey = selectedScenario.toLowerCase().replace('.', '') as keyof typeof processedClimateData;
+      const selectedData = processedClimateData[scenarioKey];
+
+      if (!selectedData || !selectedData.temp.years || !selectedData.precip.years) return [];
+
+      return [
+        {
+          type: 'scatter',
+          mode: 'lines',
+          x: selectedData.temp.years,
+          y: selectedData.temp.values,
+          name: 'Temperature',
+          yaxis: 'y',
+          line: { color: '#ef4444', width: 3 },
+          hovertemplate: '<b>Temperature</b><br>Year: %{x}<br>Value: %{y:.2f}°C<extra></extra>'
+        },
+        {
+          type: 'scatter',
+          mode: 'lines',
+          x: selectedData.precip.years,
+          y: selectedData.precip.values,
+          name: 'Precipitation',
+          yaxis: 'y2',
+          line: { color: '#3b82f6', width: 3 },
+          hovertemplate: '<b>Precipitation</b><br>Year: %{x}<br>Value: %{y:.1f} mm<extra></extra>'
+        }
+      ];
+    }
   }, [processedClimateData, selectedScenario]);
 
   // Surface Water Availability chart data using real data
@@ -536,7 +571,7 @@ export default function WaterAvailabilityPage() {
               data={tempPrecipData}
               layout={{
                 title: {
-                  text: `Temperature & Precipitation Trends - ${selectedScenario}`,
+                  text: `Temperature & Precipitation Trends - ${selectedScenario === 'Any' ? 'Average (RCP2.6 & RCP4.5)' : selectedScenario}`,
                   x: 0.5,
                   xanchor: 'center',
                   font: { size: 16 }

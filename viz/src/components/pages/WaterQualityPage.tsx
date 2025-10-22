@@ -144,7 +144,6 @@ export default function WaterQualityPage() {
   const scenarioToClimate: Record<string, number> = {
     'tSSP1-RCP2.6': 1,
     'tSSP2-RCP4.5': 2,
-    'tSSP5-RCP8.5': 3,
   };
 
   // Global scenario definitions
@@ -161,12 +160,6 @@ export default function WaterQualityPage() {
       icon: Scale,
       color: 'bg-amber-500'
     },
-    'tSSP5-RCP8.5': {
-      name: 'Focusing on economic development',
-      description: 'Market-driven development, high economic growth, and limited climate action with high emissions',
-      icon: Factory,
-      color: 'bg-red-500'
-    }
   };
 
   // Fetch data using global scenario context
