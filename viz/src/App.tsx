@@ -8,7 +8,6 @@ import DemographicsPageOptimized from './components/pages/DemographicsPageOptimi
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
 import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
 import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
-import AgriculturePage from './components/pages/AgriculturePage';
 import WaterQualityPage from './components/pages/WaterQualityPage';
 
 // Import global state management

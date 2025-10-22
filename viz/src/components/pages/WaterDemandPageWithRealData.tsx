@@ -313,7 +313,7 @@ export default function WaterDemandPageWithRealData() {
           <div className="space-y-3">
             {irrigationEfficiency !== null ? (
               <ParameterSlider
-                label="Water Saving Irrigation Efficiency Ratio (Global)"
+                label="Irrigation Intensity"
                 min={parameterRanges.irrigation?.min || 0.8}
                 max={parameterRanges.irrigation?.max || 1.0}
                 step={parameterRanges.irrigation?.step || 0.01}

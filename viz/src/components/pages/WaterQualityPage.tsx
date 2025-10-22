@@ -3,7 +3,7 @@ import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
-import { Activity, Gauge, Leaf, Scale, Factory } from 'lucide-react';
+import { Activity, Gauge, Leaf, Scale, Factory, Droplets } from 'lucide-react';
 
 /**
  * Water Stress Index Chart Component
@@ -247,9 +247,9 @@ export default function WaterQualityPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Left: Water Stress Index Chart */}
-        <div className="h-[400px]">
+        <div className="min-h-[400px]">
           {wsiData ? (
             <WaterStressIndexChart
               data={wsiData}
@@ -359,6 +359,96 @@ export default function WaterQualityPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* WSI Threshold Monitors */}
+      <div className="mt-12">
+        {wsiData?.series ? (
+          <div className="grid grid-cols-3 gap-4">
+            {([0.8, 0.6, 0.4] as number[]).map((threshold, idx) => {
+              const series = wsiData.series;
+              const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
+              const time = series.time;
+              let firstYear: number | null = null;
+              let continuousYears = 0;
+              if (Array.isArray(values) && Array.isArray(time) && values.length === time.length) {
+                // Only consider data from 2020 onwards
+                let startIndex = -1;
+                for (let i = 0; i < values.length; i++) {
+                  const year = time[i];
+                  if (year >= 2020) {
+                    const v = values[i] as number;
+                    if (typeof v === 'number' && v < threshold) {
+                      firstYear = year;
+                      startIndex = i;
+                      break;
+                    }
+                  }
+                }
+                if (startIndex >= 0) {
+                  // Count continuous integer years crossed
+                  let yearCount = 0;
+                  let lastYear = Math.floor(time[startIndex]);
+
+                  for (let j = startIndex; j < values.length; j++) {
+                    const v = values[j] as number;
+                    const currentYear = Math.floor(time[j]);
+
+                    if (typeof v === 'number' && v < threshold) {
+                      // If we've moved to a new year, increment count
+                      if (currentYear > lastYear) {
+                        yearCount++;
+                        lastYear = currentYear;
+                      }
+                    } else {
+                      // Threshold exceeded, stop counting
+                      break;
+                    }
+                  }
+
+                  // Add 1 for the initial year
+                  continuousYears = yearCount + 1;
+                }
+              }
+
+              const palette = idx === 0
+                ? { bg: 'from-rose-50 to-red-50', darkBg: 'from-rose-900/20 to-red-900/20', border: 'border-red-200 dark:border-red-800', circle: 'bg-red-500', text: 'text-red-900 dark:text-red-200' }
+                : idx === 1
+                ? { bg: 'from-amber-50 to-yellow-50', darkBg: 'from-amber-900/20 to-yellow-900/20', border: 'border-amber-200 dark:border-amber-800', circle: 'bg-amber-500', text: 'text-amber-900 dark:text-amber-200' }
+                : { bg: 'from-emerald-50 to-green-50', darkBg: 'from-emerald-900/20 to-green-900/20', border: 'border-emerald-200 dark:border-emerald-800', circle: 'bg-emerald-500', text: 'text-emerald-900 dark:text-emerald-200' };
+
+              return (
+                <div key={threshold} className={`bg-gradient-to-br ${palette.bg} dark:${palette.darkBg} border ${palette.border} rounded-lg p-4`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-8 h-8 rounded-full ${palette.circle} flex items-center justify-center`}>
+                      <Droplets className="w-4 h-4 text-white" />
+                    </div>
+                    <h4 className={`font-semibold ${palette.text}`}>WSI &lt; {threshold}</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${palette.text} opacity-80`}>First Year</span>
+                      <span className={`font-bold ${palette.text}`}>
+                        {firstYear ? Math.round(firstYear) : (threshold === 0.4 ? 'Never' : '—')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${palette.text} opacity-80`}>Continuous Years</span>
+                      <span className={`font-bold ${palette.text}`}>
+                        {continuousYears > 0 ? continuousYears : (threshold === 0.4 ? 'Never' : '—')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">Based on {scenarioResult?.isSingleScenario ? 'single scenario' : 'multi-scenario mean'} (2020+)</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-[120px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">Loading WSI threshold monitors...</p>
+          </div>
+        )}
       </div>
     </div>
   );
