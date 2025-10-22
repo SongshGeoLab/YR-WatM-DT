@@ -72,13 +72,13 @@ This is an interactive data visualization platform showcasing future scenarios o
 ### Left Sidebar Navigation
 
 Contains navigation buttons for 7 thematic pages:
-1. 🗺️ **Study Area** - Research Area
-2. 🌧️ **Water Availability** - Water Resource Availability
-3. 👥 **Demographics** - Population Demographics
-4. 🌲 **Ecological Water** - Ecological Water Use
-5. 🌾 **Agriculture** - Agricultural Water Use
-6. 📊 **Water Stress** - Water Resource Stress
-7. 🔬 **Water Quality** - Water Quality
+1. 🗺️ **Introduction** - Study area introduction
+2. 🌧️ **Climate Change** - Climate change impact analysis
+3. 👥 **Demographics** - Demographics and domestic water
+4. 🌾 **Water Demand** - Water resource demand analysis
+5. 📊 **Water Composition** - Water resource composition analysis
+6. 🌲 **Ecological Water** - Ecological water
+7. 🔬 **Water Stress Index** - Water stress index
 
 ### Bottom Toolbar
 

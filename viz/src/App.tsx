@@ -7,8 +7,8 @@ import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
 import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
 import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
 import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
+import WaterDemandCompositionPage from './components/pages/WaterDemandCompositionPage';
 import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
-import WaterQualityPage from './components/pages/WaterQualityPage';
 
 // Import global state management
 import { ScenarioProvider, useScenario } from './contexts/ScenarioContext';
@@ -69,9 +69,9 @@ function AppInner() {
       case 1: return <WaterAvailabilityPage />;
       case 2: return <DemographicsPageOptimized />;
       case 3: return <WaterDemandPageWithRealData />; // Page 4
-      case 4: return <WaterStressIndexPage />; // Page 5 (Water Composition Analysis component)
+      case 4: return <WaterDemandCompositionPage />; // Page 5 (Water Composition Analysis)
       case 5: return <EcologicalWaterPageSlider />; // Page 6
-      case 6: return <WaterQualityPage />; // Page 7
+      case 6: return <WaterStressIndexPage />; // Page 7 (Water Stress Index Analysis)
       default: return <StudyAreaPage />;
     }
   };

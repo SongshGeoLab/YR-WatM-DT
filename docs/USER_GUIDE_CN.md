@@ -72,13 +72,13 @@
 ### 左侧导航栏
 
 包含7个主题页面的导航按钮：
-1. 🗺️ **Study Area** - 研究区域
-2. 🌧️ **Water Availability** - 水资源可用性
-3. 👥 **Demographics** - 人口统计
-4. 🌲 **Ecological Water** - 生态用水
-5. 🌾 **Agriculture** - 农业用水
-6. 📊 **Water Stress** - 水资源压力
-7. 🔬 **Water Quality** - 水质
+1. 🗺️ **Introduction** - 研究区域介绍
+2. 🌧️ **Climate Change** - 气候变化影响分析
+3. 👥 **Demographics** - 人口统计与生活用水
+4. 🌾 **Water Demand** - 水资源需求分析
+5. 📊 **Water Composition** - 水资源组成分析
+6. 🌲 **Ecological Water** - 生态用水
+7. 🔬 **Water Stress Index** - 水资源压力指数
 
 ### 底部工具栏
 
@@ -90,7 +90,7 @@
 
 ## 📄 页面详细说明
 
-### 1. Study Area (研究区域)
+### 1. Introduction (研究区域介绍)
 
 **功能**: 展示黄河流域的地理位置、流域范围和关键特征。
 
@@ -104,7 +104,7 @@
 
 ---
 
-### 2. Water Availability (水资源可用性)
+### 2. Climate Change (气候变化影响分析)
 
 **功能**: 展示不同气候变化情景下的水资源可用量预测。
 
@@ -112,24 +112,27 @@
 - **气候变化情景** (Climate change scenario switch for water yield)
   - 情景1: RCP2.6-SSP1（低排放）
   - 情景2: RCP4.5-SSP2（中等排放）
-  - 情景3: RCP8.5-SSP5（高排放）
+  - Any: RCP2.6和RCP4.5的平均值（排除RCP8.5数据质量问题）
 
 **主要变量**:
 - YRB available surface water（黄河流域地表水可用量）
 - hydrologic station discharge[lijin]（利津水文站径流量）
+- Temperature & Precipitation Trends（气温和降水趋势）
 
 **如何使用**:
 1. 点击不同的气候情景按钮
 2. 观察水资源可用量的变化趋势
 3. 比较不同情景下的差异
+4. 查看左下角的气温/降水图
 
 **解读提示**:
-- 较高的排放情景（RCP8.5）通常会导致更大的水资源波动
+- 选择"Any"时显示RCP2.6和RCP4.5的平均值
 - 关注峰值和谷值出现的年份
+- 气温和降水图在选择"Any"时也会显示平均值
 
 ---
 
-### 3. Demographics (人口统计)
+### 3. Demographics (人口统计与生活用水)
 
 **功能**: 展示人口变化趋势及其对水资源需求的影响。
 
@@ -196,7 +199,7 @@
 
 ---
 
-### 5. Agriculture (农业用水)
+### 4. Water Demand (水资源需求分析)
 
 **功能**: 展示农业用水需求和节水灌溉技术的影响。
 
@@ -223,47 +226,98 @@
 
 ---
 
-### 6. Water Stress (水资源压力)
+### 5. Water Composition (水资源组成分析)
 
-**功能**: 评估水资源压力指数和供需平衡状况。
+**功能**: 展示水资源需求的组成结构和趋势分析。
+
+**可调整参数**:
+- **节水灌溉效率** (water saving irrigation efficiency ratio)
+- **火力发电占比目标** (fire generation share province target)
 
 **主要变量**:
-- YRB WSI（黄河流域水资源压力指数）
+- irrigation water demand province sum（灌溉用水需求）
+- production water demand province sum（生产用水需求）
+- OA water demand province sum（其他活动用水需求）
+- domestic water demand province sum（生活用水需求）
 - water consumption of province in YRB sum（省级水资源消耗总量）
 
-**压力等级**:
-- WSI < 0.2: 低压力
-- 0.2 ≤ WSI < 0.4: 中等压力
-- 0.4 ≤ WSI < 0.6: 高压力
-- WSI ≥ 0.6: 极高压力
+**特色功能**:
+- **水资源组成树状图**: 显示各用水部门的占比
+- **总用水需求趋势**: 显示2020-2100年的变化趋势
+- **峰值分析**: 显示用水需求达到峰值的年份和数值
+- **对比面板**: 显示2020年与2100年的对比
 
 **如何使用**:
-1. 综合前面页面设置的所有参数
-2. 查看水资源压力指数的变化
-3. 识别高风险时期
+1. 调整全局参数（灌溉效率、火电占比）
+2. 观察水资源组成的变化
+3. 查看峰值分析结果
+4. 比较不同时期的用水结构
 
 **解读提示**:
-- 注意WSI超过0.4的时间段，需要特别关注
-- 结合其他页面的参数调整，寻找降低水压力的方案
+- 灌溉用水通常占最大比例
+- 关注峰值年份，制定相应的水资源管理策略
+- 对比面板帮助理解长期变化趋势
 
 ---
 
-### 7. Water Quality (水质)
+### 6. Ecological Water (生态用水)
 
-**功能**: 展示水质指标和污染物变化趋势。
+**功能**: 评估生态用水需求和生态流量阈值。
+
+**可调整参数**:
+- **生态流量变量** (Ecological water flow variable): 0.2, 0.25, 0.3
+  - 影响生态用水需求
+  - 数值越高，生态用水需求越大
 
 **主要变量**:
-- 水质综合指标
-- 污染物浓度变化
+- Ecological water flow variable（生态流量变量）
+- 生态用水需求阈值比较
 
 **如何使用**:
-1. 查看不同情景下的水质预测
-2. 关注污染物峰值时期
-3. 分析水质改善措施的效果
+1. 调整生态流量变量滑块
+2. 观察生态用水需求的变化
+3. 比较不同阈值下的影响
 
 **解读提示**:
-- 水质受多种因素影响，包括工业排放、农业面源污染等
-- 关注长期趋势而非短期波动
+- 生态流量变量直接影响生态系统的健康
+- 需要平衡生态用水与其他用水需求
+
+---
+
+### 7. Water Stress Index (水资源压力指数)
+
+**功能**: 评估水资源压力指数和供需平衡状况，包含阈值监视器。
+
+**可调整参数**:
+- **全球情景选择**: 选择预设的情景组合
+  - Radical sustainable transformation (tSSP1-RCP2.6)
+  - Balancing economy and sustainability (tSSP2-RCP4.5)
+
+**主要变量**:
+- YRB WSI（黄河流域水资源压力指数）
+
+**压力等级**:
+- WSI < 0.4: 低压力
+- 0.4 ≤ WSI < 0.6: 中等压力
+- WSI ≥ 0.6: 高压力
+
+**特色功能**:
+- **WSI阈值监视器**: 三个监视卡片显示WSI低于0.8、0.6、0.4的情况
+  - **First Year**: WSI首次低于阈值的年份
+  - **Continuous Years**: 自首次低于阈值起连续年数
+  - 基于2020年后的数据分析
+- **全球情景选择**: 可以选择不同的预设情景组合
+
+**如何使用**:
+1. 选择全球情景（或保持Any状态）
+2. 查看WSI趋势图
+3. 观察阈值监视器的结果
+4. 识别高风险时期
+
+**解读提示**:
+- 注意WSI超过0.6的时间段，需要特别关注
+- 阈值监视器帮助快速识别关键时间点
+- 结合其他页面的参数调整，寻找降低水压力的方案
 
 ---
 
@@ -276,10 +330,10 @@
 | 参数名称 | 英文名称 | 取值范围 | 影响页面 |
 |---------|---------|---------|---------|
 | 生育率变化 | Fertility Variation | 1.6, 1.65, 1.7, 1.75, 1.8 | Demographics |
-| 节水灌溉效率 | water saving irrigation efficiency ratio | 0.8, 0.85, 0.9, 0.95, 1.0 | Agriculture |
-| 火电占比目标 | fire generation share province target | 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4 | Agriculture |
+| 节水灌溉效率 | water saving irrigation efficiency ratio | 0.8, 0.85, 0.9, 0.95, 1.0 | Water Demand, Water Composition |
+| 火电占比目标 | fire generation share province target | 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4 | Water Demand, Water Composition |
 | 生态流量变量 | Ecological water flow variable | 0.2, 0.25, 0.3 | Ecological Water |
-| 气候变化情景 | Climate change scenario switch | 1, 2, 3 | Water Availability |
+| 气候变化情景 | Climate change scenario switch | 1, 2 (排除3，RCP8.5数据质量问题) | Climate Change |
 | 饮食变化情景 | Diet change scenario switch | 1, 2, 3 | Demographics |
 
 ### 情景查询机制
