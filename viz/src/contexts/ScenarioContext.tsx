@@ -62,15 +62,16 @@ interface ScenarioContextState {
 const ScenarioContext = createContext<ScenarioContextState | undefined>(undefined);
 
 /**
- * Default parameter values (all set to null for "Any" selection)
+ * Default parameter values (set to pessimistic scenario for server stability)
+ * Using "Focusing on economic development" scenario as default
  */
 const DEFAULT_PARAMETERS: ScenarioParameters = {
-  climateScenario: null, // Any climate scenario
-  fertility: null, // Any fertility
-  dietPattern: null, // Any diet pattern
-  ecologicalFlow: null, // Any ecological flow
-  irrigationEfficiency: null, // Any irrigation efficiency
-  fireGenerationShare: null, // Any fire generation share
+  climateScenario: 1, // Low emissions (SSP1-2.6)
+  fertility: 1.6, // Low fertility
+  dietPattern: 1, // Traditional diet (low meat)
+  ecologicalFlow: 0.3, // High ecological protection
+  irrigationEfficiency: 1.0, // High irrigation efficiency
+  fireGenerationShare: 0.1, // Low fire generation share
 };
 
 /**

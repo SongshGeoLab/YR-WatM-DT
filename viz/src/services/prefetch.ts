@@ -13,7 +13,7 @@ interface PrefetchConfig {
 }
 
 const DEFAULT_CONFIG: PrefetchConfig = {
-  commonScenarios: ['tSSP1-RCP2.6', 'tSSP2-RCP4.5'],
+  commonScenarios: [], // Disable prefetching to reduce server load
   commonVariables: [
     'yrb_wsi',
     'total_population',

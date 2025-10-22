@@ -139,7 +139,7 @@ const WaterStressIndexChart = React.memo(({
  */
 export default memo(function WaterQualityPage() {
   const { scenarioResult, updateParameter, applyPresetScenario } = useScenario();
-  const [selectedScenario, setSelectedScenario] = useState('baseline');
+  const [selectedScenario, setSelectedScenario] = useState('pessimistic');
   const [presetScenarios, setPresetScenarios] = useState<PresetScenario[]>([]);
 
   // Load preset scenarios on mount
@@ -149,8 +149,14 @@ export default memo(function WaterQualityPage() {
     });
   }, []);
 
-  // Get the first three preset scenarios for the buttons
-  const displayScenarios = presetScenarios.slice(0, 3);
+  // Get the first three preset scenarios for the buttons, with baseline in the middle
+  const displayScenarios = useMemo(() => {
+    const firstThree = presetScenarios.slice(0, 3);
+    // Reorder to put baseline in the middle: [optimistic, baseline, pessimistic]
+    const baseline = firstThree.find(s => s.id === 'baseline');
+    const others = firstThree.filter(s => s.id !== 'baseline');
+    return [others[0], baseline, others[1]].filter(Boolean);
+  }, [presetScenarios]);
 
   // Map scenario IDs to icons, colors, and display names
   const scenarioConfig = {
@@ -210,6 +216,7 @@ export default memo(function WaterQualityPage() {
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {displayScenarios.map((scenario) => {
+            if (!scenario) return null;
             const config = scenarioConfig[scenario.id as keyof typeof scenarioConfig];
             const Icon = config?.icon || Scale;
             const colorClass = config?.color || 'bg-blue-500';
