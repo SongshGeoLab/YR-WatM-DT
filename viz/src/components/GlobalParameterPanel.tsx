@@ -162,7 +162,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
               Climate Change Scenario
             </h3>
             <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3].map(scenario => (
+              {[1, 2].map(scenario => (
                 <button
                   key={scenario}
                   onClick={() => updateParameter('climateScenario', scenario)}
@@ -172,7 +172,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
                       : 'border-border hover:bg-muted'
                   }`}
                 >
-                  RCP{scenario === 1 ? '2.6' : scenario === 2 ? '4.5' : '8.5'}
+                  RCP{scenario === 1 ? '2.6' : '4.5'}
                 </button>
               ))}
               <button

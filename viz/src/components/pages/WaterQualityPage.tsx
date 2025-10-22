@@ -4,6 +4,7 @@ import { Card } from '../ui/card';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import { Activity, Gauge, Leaf, Scale, Factory, Droplets } from 'lucide-react';
+import { getPresetScenarios, PresetScenario } from '../../services/config';
 
 /**
  * Water Stress Index Chart Component
@@ -137,29 +138,37 @@ const WaterStressIndexChart = React.memo(({
  * Water Stress Index Page with Global Parameter Integration
  */
 export default function WaterQualityPage() {
-  const { scenarioResult, updateParameter } = useScenario();
-  const [selectedScenario, setSelectedScenario] = useState('tSSP1-RCP2.6');
+  const { scenarioResult, updateParameter, applyPresetScenario } = useScenario();
+  const [selectedScenario, setSelectedScenario] = useState('baseline');
+  const [presetScenarios, setPresetScenarios] = useState<PresetScenario[]>([]);
 
-  // Map scenario keys to climate parameter values
-  const scenarioToClimate: Record<string, number> = {
-    'tSSP1-RCP2.6': 1,
-    'tSSP2-RCP4.5': 2,
-  };
+  // Load preset scenarios on mount
+  React.useEffect(() => {
+    getPresetScenarios('en').then(scenarios => {
+      setPresetScenarios(scenarios);
+    });
+  }, []);
 
-  // Global scenario definitions
-  const scenarios = {
-    'tSSP1-RCP2.6': {
-      name: 'Radical sustainable transformation',
-      description: 'Strong sustainability policies, low population growth, rapid technological progress, and ambitious climate action',
-      icon: Leaf,
-      color: 'bg-green-500'
-    },
-    'tSSP2-RCP4.5': {
-      name: 'Balancing economy and sustainability',
-      description: 'Moderate policies, balanced development, and gradual climate action with mixed economic growth',
+  // Get the first three preset scenarios for the buttons
+  const displayScenarios = presetScenarios.slice(0, 3);
+
+  // Map scenario IDs to icons, colors, and display names
+  const scenarioConfig = {
+    'baseline': {
       icon: Scale,
-      color: 'bg-amber-500'
+      color: 'bg-blue-500',
+      displayName: 'Balancing economy and sustainability'
     },
+    'optimistic': {
+      icon: Leaf,
+      color: 'bg-green-500',
+      displayName: 'Radical sustainable transformation'
+    },
+    'pessimistic': {
+      icon: Factory,
+      color: 'bg-red-500',
+      displayName: 'Focusing on economic development'
+    }
   };
 
   // Fetch data using global scenario context
@@ -200,31 +209,35 @@ export default function WaterQualityPage() {
           Select a preset of parameters from three overall scenarios:
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Object.entries(scenarios).map(([key, scenario]) => {
-            const Icon = scenario.icon;
+          {displayScenarios.map((scenario) => {
+            const config = scenarioConfig[scenario.id as keyof typeof scenarioConfig];
+            const Icon = config?.icon || Scale;
+            const colorClass = config?.color || 'bg-blue-500';
             return (
-              <Tooltip key={key}>
+              <Tooltip key={scenario.id}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => {
-                      setSelectedScenario(key);
-                      updateParameter('climateScenario', scenarioToClimate[key]);
+                      setSelectedScenario(scenario.id);
+                      if (applyPresetScenario) {
+                        applyPresetScenario(scenario.parameters);
+                      }
                     }}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${
-                      selectedScenario === key
-                        ? `${scenario.color} border-transparent text-white`
+                      selectedScenario === scenario.id
+                        ? `${colorClass} border-transparent text-white`
                         : 'bg-card border-border hover:border-muted-foreground text-foreground'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        selectedScenario === key
+                        selectedScenario === scenario.id
                           ? 'bg-white/20 text-white'
                           : 'bg-muted text-muted-foreground'
                       }`}>
                         <Icon className="w-5 h-5" />
                       </div>
-                      <div className="font-medium">{scenario.name}</div>
+                      <div className="font-medium">{config?.displayName || scenario.name}</div>
                     </div>
                   </button>
                 </TooltipTrigger>
@@ -232,6 +245,9 @@ export default function WaterQualityPage() {
                   <div className="space-y-2">
                     <div className="font-medium text-base">{scenario.name}</div>
                     <div className="text-sm opacity-90">{scenario.description}</div>
+                    {scenario.story && (
+                      <div className="text-xs opacity-75 italic">{scenario.story}</div>
+                    )}
                   </div>
                 </TooltipContent>
               </Tooltip>

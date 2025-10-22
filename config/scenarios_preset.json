@@ -67,7 +67,7 @@
         "cn": "最差情景，持续高排放、技术采用缓慢、环境政策薄弱。"
       },
       "parameters": {
-        "climateScenario": 3,
+        "climateScenario": 2,
         "fertility": 1.8,
         "dietPattern": 3,
         "ecologicalFlow": 0.2,

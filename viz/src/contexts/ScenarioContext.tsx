@@ -265,7 +265,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
             const nullParam = nullParams[0][0];
             switch (nullParam) {
               case 'climateScenario':
-                estimatedCount = 3; // RCP2.6, RCP4.5, RCP8.5
+                estimatedCount = 2; // RCP2.6, RCP4.5
                 break;
               case 'fertility':
                 estimatedCount = 5; // 1.6, 1.65, 1.7, 1.75, 1.8

@@ -109,8 +109,7 @@ export default function WaterAvailabilityPage() {
   const selectedScenario = useMemo(() => {
     const scenarioMap = {
       1: 'RCP2.6',
-      2: 'RCP4.5',
-      3: 'RCP8.5'
+      2: 'RCP4.5'
     };
     return parameters.climateScenario ? scenarioMap[parameters.climateScenario as keyof typeof scenarioMap] : 'Any';
   }, [parameters.climateScenario]);
@@ -124,8 +123,7 @@ export default function WaterAvailabilityPage() {
 
     const climateScenarioMap = {
       'RCP2.6': 1,
-      'RCP4.5': 2,
-      'RCP8.5': 3
+      'RCP4.5': 2
     };
     const scenarioValue = climateScenarioMap[scenario as keyof typeof climateScenarioMap];
     if (scenarioValue) {
@@ -189,14 +187,12 @@ export default function WaterAvailabilityPage() {
     // Map API scenario names to display names
     const scenarioMapping = {
       'ssp126': 'RCP2.6-SSP1',
-      'ssp245': 'RCP4.5-SSP2',
-      'ssp585': 'RCP8.5-SSP5'
+      'ssp245': 'RCP4.5-SSP2'
     };
 
     const processed = {
       rcp26: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
-      rcp45: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
-      rcp85: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } }
+      rcp45: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } }
     };
 
     // Process temperature data
@@ -204,7 +200,6 @@ export default function WaterAvailabilityPage() {
       const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
       if (displayName === 'RCP2.6-SSP1') processed.rcp26.temp = data;
       else if (displayName === 'RCP4.5-SSP2') processed.rcp45.temp = data;
-      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.temp = data;
     });
 
     // Process precipitation data
@@ -212,7 +207,6 @@ export default function WaterAvailabilityPage() {
       const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
       if (displayName === 'RCP2.6-SSP1') processed.rcp26.precip = data;
       else if (displayName === 'RCP4.5-SSP2') processed.rcp45.precip = data;
-      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.precip = data;
     });
 
     return processed;
@@ -248,17 +242,6 @@ export default function WaterAvailabilityPage() {
       });
     }
 
-    if (processedClimateData.rcp85.temp.years && processedClimateData.rcp85.temp.years.length > 0) {
-      traces.push({
-        type: 'scatter',
-        mode: 'lines',
-        x: processedClimateData.rcp85.temp.years,
-        y: processedClimateData.rcp85.temp.values,
-        name: 'RCP8.5-SSP5',
-        line: { color: '#ef4444', width: 3 },
-        hovertemplate: '<b>RCP8.5-SSP5</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
-      });
-    }
 
     return traces;
   }, [processedClimateData]);
