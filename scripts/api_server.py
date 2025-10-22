@@ -37,6 +37,7 @@ Google-style docstrings are used.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -159,9 +160,19 @@ def _get_basin_geojson() -> dict:
 app = FastAPI(title="Decision Theater API", version="0.1.0")
 
 # Allow local dev frontends (Dash, Vite, etc.)
+# NOTE: For production, set API_CORS_ALLOW_ORIGINS environment variable to restrict origins
+# Development default allows all origins for easier testing
+_allowed_origins_env = os.getenv("API_CORS_ALLOW_ORIGINS", "")
+if _allowed_origins_env:
+    # Production: use specific origins from environment
+    _allowed_origins = _allowed_origins_env.split(",")
+else:
+    # Development: allow all origins
+    _allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -199,7 +210,7 @@ def root() -> dict:
 
 
 @app.get("/config/terminology")
-def get_terminology(lang: str = Query("en", regex="^(en|cn)$")) -> Dict[str, Any]:
+def get_terminology(lang: str = Query("en", pattern="^(en|cn)$")) -> Dict[str, Any]:
     """Get terminology mappings for parameter display labels.
 
     Args:
@@ -214,7 +225,7 @@ def get_terminology(lang: str = Query("en", regex="^(en|cn)$")) -> Dict[str, Any
 
 @app.get("/config/scenarios_preset")
 def get_scenarios_preset(
-    lang: str = Query("en", regex="^(en|cn)$"),
+    lang: str = Query("en", pattern="^(en|cn)$"),
 ) -> List[Dict[str, Any]]:
     """Get preset scenario configurations.
 
@@ -241,7 +252,7 @@ def get_water_stress_config() -> Dict[str, Any]:
 
 @app.get("/config/explanations/{key}")
 def get_explanation(
-    key: str, lang: str = Query("en", regex="^(en|cn)$")
+    key: str, lang: str = Query("en", pattern="^(en|cn)$")
 ) -> Dict[str, Any]:
     """Get explanation content for a specific topic.
 
@@ -486,8 +497,22 @@ def get_series_multi(
                 )
                 .with_columns(
                     [
-                        (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
-                        (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper"),
+                        # Calculate standard error for 95% CI of the mean
+                        # Handle null std and ensure n_scenarios > 0
+                        (
+                            pl.when(pl.col("n_scenarios") > 1)
+                            .then(
+                                pl.col("std").fill_null(0)
+                                / pl.col("n_scenarios").cast(pl.Float64).sqrt()
+                            )
+                            .otherwise(pl.col("std").fill_null(0))
+                        ).alias("se"),
+                    ]
+                )
+                .with_columns(
+                    [
+                        (pl.col("mean") - 1.96 * pl.col("se")).alias("ci_lower"),
+                        (pl.col("mean") + 1.96 * pl.col("se")).alias("ci_upper"),
                     ]
                 )
                 .sort("step")
@@ -652,10 +677,18 @@ def get_series_statistics(
 
 @app.get("/reports/{filename}")
 def get_report_file(filename: str):
-    """Serve report files (JSON, images, etc.) from the reports directory."""
-    file_path = Path("reports") / filename
+    """Serve report files (JSON, images, etc.) from the reports directory.
 
-    if not file_path.exists():
+    Security: Validates path to prevent directory traversal attacks.
+    """
+    base_dir = Path("reports").resolve()
+    file_path = (base_dir / filename).resolve()
+
+    # Enforce containment: prevent path traversal (e.g., ../../etc/passwd)
+    if not str(file_path).startswith(str(base_dir) + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
     # Set appropriate media type based on file extension
@@ -761,8 +794,22 @@ def get_page5_data(
             )
             .with_columns(
                 [
-                    (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
-                    (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper"),
+                    # Calculate standard error for 95% CI of the mean
+                    # Handle null std and ensure n_scenarios > 0
+                    (
+                        pl.when(pl.col("n_scenarios") > 1)
+                        .then(
+                            pl.col("std").fill_null(0)
+                            / pl.col("n_scenarios").cast(pl.Float64).sqrt()
+                        )
+                        .otherwise(pl.col("std").fill_null(0))
+                    ).alias("se"),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col("mean") - 1.96 * pl.col("se")).alias("ci_lower"),
+                    (pl.col("mean") + 1.96 * pl.col("se")).alias("ci_upper"),
                 ]
             )
             .sort("step")
@@ -882,8 +929,8 @@ def get_climate_data():
         for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in tas_df["Scenario"].values:
                 scenario_data = tas_df[
-                    (tas_df["Scenario"] == scenario) & 
-                    (tas_df["CropType"] == "taxavg")  # Only use average temperature
+                    (tas_df["Scenario"] == scenario)
+                    & (tas_df["CropType"] == "taxavg")  # Only use average temperature
                 ]
                 # Filter out invalid values (NaN, inf, -inf)
                 valid_data = scenario_data.dropna()
@@ -960,7 +1007,7 @@ def analyze_sensitivity(
     end_year: Optional[int] = Query(None, ge=1900, description="End year for analysis"),
     metric: str = Query(
         "cv",
-        regex="^(cv|range|range_pct|std|iqr)$",
+        pattern="^(cv|range|range_pct|std|iqr)$",
         description="Sensitivity metric: cv, range, range_pct, std, or iqr",
     ),
     top_n: Optional[int] = Query(None, ge=1, description="Return only top N results"),

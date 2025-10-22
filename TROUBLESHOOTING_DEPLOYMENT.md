@@ -172,11 +172,14 @@ cd viz && npm run build && cd ..
 # 1. 本地构建
 cd viz && npm run build && cd ..
 
-# 2. 备份并清理服务器
+# 2. 清理服务器（推荐：仅清理本项目）
 ssh ubuntu@43.165.1.18 'cd /home/ubuntu/watm-dt && \
-  docker compose down && \
-  docker system prune -af --volumes && \
+  docker compose down --volumes --rmi all && \
   rm -rf viz/build/*'
+
+# ⚠️ 注意：避免使用全局清理命令！
+# docker system prune -af --volumes 会删除服务器上所有 Docker 资源，
+# 可能影响其他项目。请使用上面的项目作用域清理命令。
 
 # 3. 重新上传
 rsync -avz --progress viz/build/ ubuntu@43.165.1.18:/home/ubuntu/watm-dt/viz/build/

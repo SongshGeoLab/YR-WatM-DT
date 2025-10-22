@@ -273,7 +273,10 @@ export default function WaterStressIndexPage() {
     const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
     const time = series.time;
 
-    if (!values || !time || values.length === 0 || time.length === 0) return null;
+    // Guard: verify arrays exist, have data, and are aligned
+    if (!values || !time || values.length === 0 || time.length === 0 || values.length !== time.length) {
+      return null;
+    }
 
     // Find peak value and corresponding year
     let maxValue = values[0];

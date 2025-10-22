@@ -136,7 +136,6 @@ data
 .DS_Store
 data.zip
 *.tar.gz
-deploy.tar.gz
 
 # -------- Frontend (viz/) --------
 viz/node_modules/

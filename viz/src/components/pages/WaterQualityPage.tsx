@@ -137,8 +137,15 @@ const WaterStressIndexChart = React.memo(({
  * Water Stress Index Page with Global Parameter Integration
  */
 export default function WaterQualityPage() {
-  const { scenarioResult } = useScenario();
+  const { scenarioResult, updateParameter } = useScenario();
   const [selectedScenario, setSelectedScenario] = useState('tSSP1-RCP2.6');
+
+  // Map scenario keys to climate parameter values
+  const scenarioToClimate: Record<string, number> = {
+    'tSSP1-RCP2.6': 1,
+    'tSSP2-RCP4.5': 2,
+    'tSSP5-RCP8.5': 3,
+  };
 
   // Global scenario definitions
   const scenarios = {
@@ -206,7 +213,10 @@ export default function WaterQualityPage() {
               <Tooltip key={key}>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => setSelectedScenario(key)}
+                    onClick={() => {
+                      setSelectedScenario(key);
+                      updateParameter('climateScenario', scenarioToClimate[key]);
+                    }}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                       selectedScenario === key
                         ? `${scenario.color} border-transparent text-white`

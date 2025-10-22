@@ -90,8 +90,22 @@ def plot_multi_scenario(
         )
         .with_columns(
             [
-                (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
-                (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper"),
+                # Calculate standard error for 95% CI of the mean (not observation uncertainty)
+                # Handle null std and ensure n_scenarios > 0
+                (
+                    pl.when(pl.col("n_scenarios") > 1)
+                    .then(
+                        pl.col("std").fill_null(0)
+                        / pl.col("n_scenarios").cast(pl.Float64).sqrt()
+                    )
+                    .otherwise(pl.col("std").fill_null(0))
+                ).alias("se"),
+            ]
+        )
+        .with_columns(
+            [
+                (pl.col("mean") - 1.96 * pl.col("se")).alias("ci_lower"),
+                (pl.col("mean") + 1.96 * pl.col("se")).alias("ci_upper"),
             ]
         )
         .sort("time")
@@ -266,6 +280,15 @@ def plot_scenario_comparison(
             [
                 pl.col("value").mean().alias("mean"),
                 pl.col("value").std().alias("std"),
+                pl.col("scenario_name").n_unique().alias("n_scenarios"),
+            ]
+        )
+        .with_columns(
+            [
+                # Calculate standard error for 95% CI of the mean
+                (pl.col("std") / pl.col("n_scenarios").cast(pl.Float64).sqrt()).alias(
+                    "se"
+                ),
             ]
         )
         .sort(["time", group_by])
@@ -296,12 +319,12 @@ def plot_scenario_comparison(
                 trace_color = trace.line.color
                 break
 
-        # Add CI band
+        # Add CI band (using standard error for mean)
         fig.add_trace(
             go.Scatter(
                 x=group_data["time"].tolist() + group_data["time"].tolist()[::-1],
-                y=(group_data["mean"] + 1.96 * group_data["std"]).tolist()
-                + (group_data["mean"] - 1.96 * group_data["std"]).tolist()[::-1],
+                y=(group_data["mean"] + 1.96 * group_data["se"]).tolist()
+                + (group_data["mean"] - 1.96 * group_data["se"]).tolist()[::-1],
                 fill="toself",
                 fillcolor=f'rgba{tuple(list(px.colors.hex_to_rgb(trace_color or "#888888")) + [0.2])}',
                 line=dict(color="rgba(255,255,255,0)"),

@@ -16,7 +16,7 @@ interface WaterDemandComparisonData {
   error: string | null;
 }
 
-const calculateFutureChange = (data: number[], baselineYear: number = 2020, startYear: number = 1981): ComparisonData => {
+const calculateFutureChange = (data: number[], baselineYear: number = 2020, startYear: number = 2020): ComparisonData => {
   const baselineIndex = baselineYear - startYear;
   const futureStartIndex = Math.max(baselineIndex + 1, 0);
 
@@ -52,20 +52,8 @@ export const useWaterDemandComparison = (): WaterDemandComparisonData => {
       try {
         setData(prev => ({ ...prev, loading: true, error: null }));
 
-        // Prepare filters for API calls
-        const filters: any = {};
-        Object.entries(parameters).forEach(([key, value]) => {
-          if (value !== null) {
-            const apiKey = key === 'climateScenario' ? 'Climate change scenario switch for water yield' :
-                          key === 'fertility' ? 'Fertility Variation' :
-                          key === 'dietPattern' ? 'Diet change scenario switch' :
-                          key === 'ecologicalFlow' ? 'Ecological water flow variable' :
-                          key === 'irrigationEfficiency' ? 'water saving irrigation efficiency ratio' :
-                          key === 'fireGenerationShare' ? 'fire generation share province target' :
-                          key;
-            filters[apiKey] = value;
-          }
-        });
+        // Use shared helper to convert parameters to API filters
+        const filters = api.parametersToFilters(parameters);
 
         // Fetch irrigation and production water demand data
         const [irrigationResult, productionResult] = await Promise.all([

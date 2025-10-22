@@ -1,4 +1,4 @@
-# 数据可视化网页原型
+# DT: Wat-M in Yellow River
 
 黄河流域水资源管理决策剧场 (WatM-DT) 前端应用。基于 React + Vite + Plotly.js 构建的交互式数据可视化平台。
 

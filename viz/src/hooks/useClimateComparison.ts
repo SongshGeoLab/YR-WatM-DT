@@ -17,7 +17,7 @@ interface ClimateComparisonData {
   error: string | null;
 }
 
-const calculateFutureChange = (data: number[], baselineYear: number = 2020, startYear: number = 1981): ComparisonData => {
+const calculateFutureChange = (data: number[], baselineYear: number = 2020, startYear: number = 2020): ComparisonData => {
   const baselineIndex = baselineYear - startYear;
   const futureStartIndex = Math.max(baselineIndex + 1, 0);
 
