@@ -12,7 +12,7 @@ import { Map, Droplets, Mountain, Calendar, Clock } from 'lucide-react';
  */
 export default function StudyAreaPage() {
   const [activeTab, setActiveTab] = useState<'discharge' | 'sediment'>('discharge');
-  const [currentYear, setCurrentYear] = useState<number>(1000);
+  const [currentYear, setCurrentYear] = useState<number>(2020);
 
   // River discharge data (from the successful RiverAnalysisPage)
   const dischargeData = useMemo(() => {
