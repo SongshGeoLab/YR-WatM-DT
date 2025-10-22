@@ -205,9 +205,8 @@ def plot_multi_scenario(
             mode="lines",
             line=dict(color=color, width=3),
             name=f"Mean ({n_scenarios} scenarios)",
-            hovertemplate="<b>Mean</b><br>Time: %{x}<br>Value: %{y:.2f}<br>±Std: "
-            + stats_pd["std"].apply(lambda x: f"{x:.2f}").astype(str)
-            + "<extra></extra>",
+            text=stats_pd["std"].round(2).astype(str),
+            hovertemplate="<b>Mean</b><br>Time: %{x}<br>Value: %{y:.2f}<br>±Std: %{text}<extra></extra>",
         )
     )
 

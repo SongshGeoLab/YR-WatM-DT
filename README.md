@@ -234,22 +234,22 @@ GET /series/multi?variable=YRB%20available%20surface%20water
 ```json
 {
   "temperature": {
-    "ssp126_corrected": {
-      "scenario": "ssp126_corrected",
+    "ssp126": {
+      "scenario": "ssp126",
       "variable": "Temperature",
       "values": [12.3, 12.4, ...]
     },
-    "ssp245_corrected": {...},
-    "ssp585_corrected": {...}
+    "ssp245": {...},
+    "ssp585": {...}
   },
   "precipitation": {
-    "ssp126_corrected": {
-      "scenario": "ssp126_corrected",
+    "ssp126": {
+      "scenario": "ssp126",
       "variable": "Precipitation",
       "values": [520.5, 522.1, ...]
     },
-    "ssp245_corrected": {...},
-    "ssp585_corrected": {...}
+    "ssp245": {...},
+    "ssp585": {...}
   },
   "years": [1981, 1982, ..., 2100]
 }

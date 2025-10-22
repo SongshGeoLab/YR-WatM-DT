@@ -38,8 +38,11 @@ const WaterCompositionTreeChart = React.memo(({
 
     // Get latest values for composition
     const getLatestValue = (series: any) => {
+      if (!series) return 0;
       const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-      return values ? values[values.length - 1] : 0;
+      if (!Array.isArray(values) || values.length === 0) return 0;
+      const last = values[values.length - 1];
+      return Number.isFinite(last) ? last : 0;
     };
 
     const irrigationValue = getLatestValue(irrigationSeries);
