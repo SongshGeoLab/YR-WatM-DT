@@ -257,6 +257,14 @@ class ScenarioQuery:
             scenarios = self.scenarios
             scenario_names = scenarios.get_column("scenario_name").to_list()
 
+        # Limit number of scenarios to prevent memory issues
+        MAX_SCENARIOS = 1000
+        if len(scenario_names) > MAX_SCENARIOS:
+            print(
+                f"⚠️  Warning: Query matches {len(scenario_names)} scenarios, limiting to {MAX_SCENARIOS}"
+            )
+            scenario_names = scenario_names[:MAX_SCENARIOS]
+
         # Load and concatenate variable data
         dfs = []
         for var in variables:
@@ -266,8 +274,11 @@ class ScenarioQuery:
             if not var_file.exists():
                 raise FileNotFoundError(f"Variable file not found: {var_file}")
 
-            df = pl.read_parquet(var_file).filter(
-                pl.col("scenario_name").is_in(scenario_names)
+            # Use lazy evaluation to optimize memory usage
+            df = (
+                pl.scan_parquet(var_file)
+                .filter(pl.col("scenario_name").is_in(scenario_names))
+                .collect()
             )
             dfs.append(df)
 
