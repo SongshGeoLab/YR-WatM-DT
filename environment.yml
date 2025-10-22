@@ -1,0 +1,16 @@
+name: yr-watm-dt
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - polars=1.31.0
+  - fastapi=0.115.0
+  - uvicorn=0.30.6
+  - pyarrow=21.0.0
+  - geopandas=1.1.1
+  - plotly=6.3.1
+  - pyyaml=6.0.1
+  - pip
+  - pip:
+    - fastexcel==0.16.0

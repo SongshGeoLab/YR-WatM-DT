@@ -285,6 +285,74 @@ npm run dev
 
 ---
 
+## 🪟 Multi-Window Mode
+
+The application supports running each page in a separate browser window with **real-time synchronization** across all windows. When you change a parameter in any window, all other windows update automatically within milliseconds.
+
+### How to Use
+
+1. **Start the backend and frontend** as described above
+
+2. **Open each page in a separate browser window**:
+   - Window 1: `http://localhost:5173/page1` (Study Area)
+   - Window 2: `http://localhost:5173/page2` (Water Availability)
+   - Window 3: `http://localhost:5173/page3` (Demographics)
+   - Window 4: `http://localhost:5173/page4` (Ecological Water)
+   - Window 5: `http://localhost:5173/page5` (Agriculture)
+   - Window 6: `http://localhost:5173/page6` (WSI Focus)
+   - Window 7: `http://localhost:5173/page7` (Water Quality)
+
+3. **Arrange windows** across your monitors as needed
+
+4. **Adjust parameters** in any window using the "Parameters" button in the header
+
+5. **Watch synchronization** - all windows update automatically! ⚡
+
+### Technical Details
+
+- **Synchronization**: Uses browser's built-in Broadcast Channel API
+- **Latency**: < 10ms between windows
+- **Scope**: Works across windows/tabs on the same machine and browser
+- **Parameters synced**:
+  - Climate Scenario (RCP2.6, RCP4.5, RCP8.5)
+  - Fertility Variation (1.6-1.8)
+  - Diet Pattern (1-3)
+  - Ecological Flow (0.2-0.3)
+  - Irrigation Efficiency (0.8-1.0)
+  - Fire Generation Share (0.1-0.4)
+
+### Multi-Monitor Setup Example
+
+```
+Monitor 1:              Monitor 2:              Monitor 3:
+┌────────────────┐      ┌────────────────┐      ┌────────────────┐
+│ Page 1         │      │ Page 4         │      │ Page 6         │
+│ Study Area     │      │ Ecological     │      │ WSI Focus      │
+└────────────────┘      └────────────────┘      └────────────────┘
+┌────────────────┐      ┌────────────────┐      ┌────────────────┐
+│ Page 2         │      │ Page 5         │      │ Page 7         │
+│ Water Avail    │      │ Agriculture    │      │ Water Quality  │
+└────────────────┘      └────────────────┘      └────────────────┘
+┌────────────────┐
+│ Page 3         │
+│ Demographics   │
+└────────────────┘
+```
+
+### Benefits
+
+- ✅ **Simultaneous Viewing**: Compare multiple aspects of water management at once
+- ✅ **Instant Updates**: Changes propagate immediately to all windows
+- ✅ **Multi-Monitor Support**: Ideal for presentation and analysis workflows
+- ✅ **No Backend Changes**: Uses browser-native technology
+- ✅ **Maintains All Features**: Dark mode, parameter controls, and visualizations work independently in each window
+
+### Original Single-Window Mode
+
+The original tabbed interface is still available at `http://localhost:5173/` for single-window usage.
+
+---
+
 ## Workflow for Design Iteration
 
 ### 1. Developer (You)

@@ -90,6 +90,7 @@ const PARAMETER_MAPPING: Record<keyof ScenarioParameters, string> = {
  *
  * Provides global parameter state management for all pages.
  * Automatically resolves scenarios when parameters change.
+ * Synchronizes parameters across multiple browser windows using Broadcast Channel API.
  */
 export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [parameters, setParameters] = useState<ScenarioParameters>(DEFAULT_PARAMETERS);
@@ -97,6 +98,39 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [availableParams, setAvailableParams] = useState<Record<string, number[]> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Broadcast Channel for multi-window synchronization
+  const channelRef = React.useRef<BroadcastChannel | null>(null);
+
+  // Initialize Broadcast Channel for multi-window sync
+  useEffect(() => {
+    // Create broadcast channel
+    channelRef.current = new BroadcastChannel('scenario-sync');
+
+    // Listen for parameter updates from other windows
+    channelRef.current.onmessage = (event) => {
+      if (event.data.type === 'PARAMETER_UPDATE') {
+        console.log('📡 Received parameter update from another window:', event.data.key, '=', event.data.value);
+        setParameters(prev => ({
+          ...prev,
+          [event.data.key]: event.data.value
+        }));
+      } else if (event.data.type === 'PARAMETERS_RESET') {
+        console.log('📡 Received parameters reset from another window');
+        setParameters(DEFAULT_PARAMETERS);
+      }
+    };
+
+    console.log('📡 Broadcast Channel initialized for multi-window sync');
+
+    // Cleanup on unmount
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.close();
+        console.log('📡 Broadcast Channel closed');
+      }
+    };
+  }, []);
 
   // Fetch available parameters from backend on mount
   useEffect(() => {
@@ -248,7 +282,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   }, [resolveScenarios]);
 
   /**
-   * Update a single parameter
+   * Update a single parameter and broadcast to other windows
    */
   const updateParameter = useCallback((key: keyof ScenarioParameters, value: number | null) => {
     console.log(`🔧 Updating parameter: ${key} = ${value}`);
@@ -256,14 +290,32 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       [key]: value
     }));
+    
+    // Broadcast parameter change to other windows
+    if (channelRef.current) {
+      channelRef.current.postMessage({
+        type: 'PARAMETER_UPDATE',
+        key,
+        value
+      });
+      console.log('📡 Broadcasted parameter update to other windows');
+    }
   }, []);
 
   /**
-   * Reset all parameters to defaults
+   * Reset all parameters to defaults and broadcast to other windows
    */
   const resetParameters = useCallback(() => {
     console.log('🔄 Resetting all parameters to defaults');
     setParameters(DEFAULT_PARAMETERS);
+    
+    // Broadcast reset to other windows
+    if (channelRef.current) {
+      channelRef.current.postMessage({
+        type: 'PARAMETERS_RESET'
+      });
+      console.log('📡 Broadcasted parameters reset to other windows');
+    }
   }, []);
 
   /**
