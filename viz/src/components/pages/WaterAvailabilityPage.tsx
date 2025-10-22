@@ -112,11 +112,16 @@ export default function WaterAvailabilityPage() {
       2: 'RCP4.5',
       3: 'RCP8.5'
     };
-    return scenarioMap[parameters.climateScenario as keyof typeof scenarioMap] || 'RCP4.5';
+    return parameters.climateScenario ? scenarioMap[parameters.climateScenario as keyof typeof scenarioMap] : 'Any';
   }, [parameters.climateScenario]);
 
   // Handle scenario selection
   const handleScenarioChange = (scenario: string) => {
+    if (scenario === 'Any') {
+      updateParameter('climateScenario', null);
+      return;
+    }
+
     const climateScenarioMap = {
       'RCP2.6': 1,
       'RCP4.5': 2,
@@ -148,6 +153,15 @@ export default function WaterAvailabilityPage() {
   }, []);
 
   const scenarios = {
+    'Any': {
+      name: 'Any',
+      title: 'All Scenarios',
+      color: '#6b7280',
+      bgColor: 'bg-gray-50',
+      borderColor: 'border-gray-200',
+      textColor: 'text-gray-900',
+      description: 'Aggregated results from all climate scenarios'
+    },
     'RCP2.6': {
       name: 'RCP2.6',
       title: 'Radical Sustainable Transformation',

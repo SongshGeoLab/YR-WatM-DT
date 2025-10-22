@@ -62,15 +62,15 @@ interface ScenarioContextState {
 const ScenarioContext = createContext<ScenarioContextState | undefined>(undefined);
 
 /**
- * Default parameter values (some with default values for better UX)
+ * Default parameter values (all set to null for "Any" selection)
  */
 const DEFAULT_PARAMETERS: ScenarioParameters = {
-  climateScenario: 2, // RCP4.5
-  fertility: 1.7, // Medium fertility
-  dietPattern: 2, // Moderate diet
-  ecologicalFlow: 0.25, // Medium ecological flow
-  irrigationEfficiency: 0.85, // High efficiency
-  fireGenerationShare: 0.15, // Medium share
+  climateScenario: null, // Any climate scenario
+  fertility: null, // Any fertility
+  dietPattern: null, // Any diet pattern
+  ecologicalFlow: null, // Any ecological flow
+  irrigationEfficiency: null, // Any irrigation efficiency
+  fireGenerationShare: null, // Any fire generation share
 };
 
 /**
