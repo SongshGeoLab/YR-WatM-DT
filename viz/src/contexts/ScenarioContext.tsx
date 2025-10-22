@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import * as api from '../services/api';
 
 /**
@@ -99,6 +99,10 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
 
+  // Cross-tab communication: unique tab ID to avoid circular updates
+  const tabId = useRef(`tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const broadcastChannel = useRef<BroadcastChannel | null>(null);
+
   // Fetch available parameters from backend on mount
   useEffect(() => {
     (async () => {
@@ -112,6 +116,92 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
         setError(err.message);
       }
     })();
+  }, []);
+
+  // Cross-tab synchronization: Setup BroadcastChannel and localStorage listener
+  useEffect(() => {
+    console.log(`🌐 [Tab ${tabId.current}] Initializing cross-tab sync...`);
+
+    // Try to create BroadcastChannel (not supported in all browsers)
+    try {
+      broadcastChannel.current = new BroadcastChannel('watm-dt-params');
+      console.log('✅ BroadcastChannel initialized');
+    } catch (e) {
+      console.warn('⚠️ BroadcastChannel not supported, using localStorage fallback');
+    }
+
+    // Listen for messages from other tabs via BroadcastChannel
+    const handleBroadcastMessage = (event: MessageEvent) => {
+      const { type, payload, source } = event.data;
+
+      // Ignore messages from this tab
+      if (source === tabId.current) {
+        return;
+      }
+
+      console.log(`📨 [Tab ${tabId.current}] Received message from ${source}:`, type, payload);
+
+      if (type === 'PARAM_UPDATE') {
+        const { key, value } = payload;
+        setParameters(prev => ({
+          ...prev,
+          [key]: value
+        }));
+        console.log(`✅ [Tab ${tabId.current}] Synced parameter: ${key} = ${value}`);
+      } else if (type === 'PARAMS_RESET') {
+        setParameters(DEFAULT_PARAMETERS);
+        console.log(`✅ [Tab ${tabId.current}] Synced parameter reset`);
+      } else if (type === 'PRESET_APPLY') {
+        const { params } = payload;
+        setParameters(params);
+        console.log(`✅ [Tab ${tabId.current}] Synced preset scenario`);
+      }
+    };
+
+    // Listen for messages from other tabs via localStorage (fallback)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'watm-dt-params-sync' && event.newValue) {
+        try {
+          const { type, payload, source } = JSON.parse(event.newValue);
+
+          // Ignore messages from this tab
+          if (source === tabId.current) {
+            return;
+          }
+
+          console.log(`📨 [Tab ${tabId.current}] Received localStorage sync from ${source}:`, type);
+
+          if (type === 'PARAM_UPDATE') {
+            const { key, value } = payload;
+            setParameters(prev => ({
+              ...prev,
+              [key]: value
+            }));
+          } else if (type === 'PARAMS_RESET') {
+            setParameters(DEFAULT_PARAMETERS);
+          } else if (type === 'PRESET_APPLY') {
+            const { params } = payload;
+            setParameters(params);
+          }
+        } catch (e) {
+          console.error('Failed to parse storage sync message:', e);
+        }
+      }
+    };
+
+    if (broadcastChannel.current) {
+      broadcastChannel.current.addEventListener('message', handleBroadcastMessage);
+    }
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup
+    return () => {
+      if (broadcastChannel.current) {
+        broadcastChannel.current.removeEventListener('message', handleBroadcastMessage);
+        broadcastChannel.current.close();
+      }
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   /**
@@ -269,37 +359,125 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   }, [parameters, availableParams, resolveScenarios]);
 
   /**
+   * Broadcast parameter update to other tabs
+   */
+  const broadcastParameterUpdate = useCallback((key: keyof ScenarioParameters, value: number | null) => {
+    const message = {
+      type: 'PARAM_UPDATE',
+      payload: { key, value },
+      source: tabId.current,
+      timestamp: Date.now()
+    };
+
+    // Send via BroadcastChannel if available
+    if (broadcastChannel.current) {
+      try {
+        broadcastChannel.current.postMessage(message);
+        console.log(`📡 [Tab ${tabId.current}] Broadcasted via BroadcastChannel:`, key, value);
+      } catch (e) {
+        console.error('Failed to broadcast via BroadcastChannel:', e);
+      }
+    }
+
+    // Also send via localStorage as fallback
+    try {
+      localStorage.setItem('watm-dt-params-sync', JSON.stringify(message));
+      // Clear after a short delay to allow other tabs to read it
+      setTimeout(() => {
+        const current = localStorage.getItem('watm-dt-params-sync');
+        if (current === JSON.stringify(message)) {
+          localStorage.removeItem('watm-dt-params-sync');
+        }
+      }, 100);
+    } catch (e) {
+      console.error('Failed to sync via localStorage:', e);
+    }
+  }, []);
+
+  /**
    * Update a single parameter
    */
   const updateParameter = useCallback((key: keyof ScenarioParameters, value: number | null) => {
-    console.log(`🔧 Updating parameter: ${key} = ${value}`);
+    console.log(`🔧 [Tab ${tabId.current}] Updating parameter: ${key} = ${value}`);
     setParameters(prev => {
       // Skip update if value hasn't changed
       if (prev[key] === value) {
         console.log(`⏭️ Skipping parameter update - value unchanged: ${key} = ${value}`);
         return prev;
       }
+
+      // Broadcast to other tabs
+      broadcastParameterUpdate(key, value);
+
       return {
         ...prev,
         [key]: value
       };
     });
-  }, []);
+  }, [broadcastParameterUpdate]);
 
   /**
    * Reset all parameters to defaults
    */
   const resetParameters = useCallback(() => {
-    console.log('🔄 Resetting all parameters to defaults');
+    console.log(`🔄 [Tab ${tabId.current}] Resetting all parameters to defaults`);
     setParameters(DEFAULT_PARAMETERS);
+
+    // Broadcast reset to other tabs
+    const message = {
+      type: 'PARAMS_RESET',
+      payload: {},
+      source: tabId.current,
+      timestamp: Date.now()
+    };
+
+    if (broadcastChannel.current) {
+      try {
+        broadcastChannel.current.postMessage(message);
+        console.log(`📡 [Tab ${tabId.current}] Broadcasted reset`);
+      } catch (e) {
+        console.error('Failed to broadcast reset:', e);
+      }
+    }
+
+    try {
+      localStorage.setItem('watm-dt-params-sync', JSON.stringify(message));
+      setTimeout(() => localStorage.removeItem('watm-dt-params-sync'), 100);
+    } catch (e) {
+      console.error('Failed to sync reset via localStorage:', e);
+    }
   }, []);
 
   /**
    * Apply preset scenario parameters
    */
   const applyPresetScenario = useCallback((presetParams: ScenarioParameters) => {
-    console.log('✨ Applying preset scenario:', presetParams);
+    console.log(`✨ [Tab ${tabId.current}] Applying preset scenario:`, presetParams);
     setParameters(presetParams);
+
+    // Broadcast preset to other tabs
+    const message = {
+      type: 'PRESET_APPLY',
+      payload: { params: presetParams },
+      source: tabId.current,
+      timestamp: Date.now()
+    };
+
+    if (broadcastChannel.current) {
+      try {
+        broadcastChannel.current.postMessage(message);
+        console.log(`📡 [Tab ${tabId.current}] Broadcasted preset`);
+      } catch (e) {
+        console.error('Failed to broadcast preset:', e);
+      }
+    }
+
+    try {
+      localStorage.setItem('watm-dt-params-sync', JSON.stringify(message));
+      setTimeout(() => localStorage.removeItem('watm-dt-params-sync'), 100);
+    } catch (e) {
+      console.error('Failed to sync preset via localStorage:', e);
+    }
   }, []);
 
   const contextValue: ScenarioContextState = {
