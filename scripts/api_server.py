@@ -40,7 +40,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -60,6 +60,21 @@ DATA_PARQUET = Path("data_parquet")
 DATA_DIR = Path("data")
 GEOJSON_CACHE: Dict[str, dict] = {}
 _VARIABLES_MAP_CACHE: Optional[Dict[str, str]] = None  # original_name -> safe_name
+
+# Global query instance for caching
+_query_instance: Optional[Any] = None
+
+
+def _get_query_instance() -> Any:
+    """Get or create global query instance with caching enabled."""
+    global _query_instance
+    if _query_instance is None:
+        print("🚀 Initializing ScenarioQuery with caching...")
+        from scripts.query_scenarios import ScenarioQuery
+
+        _query_instance = ScenarioQuery(DATA_PARQUET)
+        print("✅ ScenarioQuery initialized with cache")
+    return _query_instance
 
 
 def _read_variables() -> List[str]:
@@ -277,6 +292,97 @@ def get_explanation(
     return explanation
 
 
+@app.get("/cache/stats")
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics and performance metrics.
+
+    Returns:
+        Dictionary with cache statistics including memory usage, hit rates, etc.
+    """
+    try:
+        query = _get_query_instance()
+        stats = query.get_cache_stats()
+
+        # Add additional performance metrics
+        stats.update(
+            {
+                "cache_enabled": True,
+                "default_scenarios_precomputed": len(query.default_scenario_cache),
+                "cache_directory": str(query.cache_dir),
+            }
+        )
+
+        return stats
+    except Exception as e:
+        return {"cache_enabled": False, "error": str(e)}
+
+
+@app.post("/cache/clear")
+def clear_cache() -> Dict[str, str]:
+    """Clear all cached query results.
+
+    Returns:
+        Success message.
+    """
+    try:
+        query = _get_query_instance()
+        query.clear_cache()
+        return {"message": "Cache cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+
+@app.get("/cache/warmup")
+def warmup_cache() -> Dict[str, Any]:
+    """Warm up cache with common queries.
+
+    This endpoint pre-computes frequently used queries to improve performance.
+
+    Returns:
+        Statistics about the warmup process.
+    """
+    try:
+        query = _get_query_instance()
+
+        # Get list of common variables
+        variables = _read_variables()[:5]  # Limit to first 5 variables
+
+        warmup_stats: Dict[str, Any] = {
+            "variables_processed": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "errors": [],
+        }
+
+        # Warm up default scenarios (already done in initialization)
+        warmup_stats["default_scenarios"] = len(query.default_scenario_cache)
+
+        # Warm up some common filter combinations
+        common_filters = [
+            {
+                "Climate change scenario switch for water yield": [1, 2]
+            },  # RCP2.6 & RCP4.5
+            {"Fertility Variation": 1.7},  # Default fertility
+            {"Diet change scenario switch": 2},  # Default diet
+        ]
+
+        for var in variables:
+            for filters in common_filters:
+                try:
+                    # This will either hit cache or compute and cache
+                    query.get_series(var, filters=filters)
+                    warmup_stats["variables_processed"] = (
+                        warmup_stats["variables_processed"] + 1
+                    )
+                except Exception as e:
+                    cast(List[str], warmup_stats["errors"]).append(f"{var}: {str(e)}")
+
+        return warmup_stats
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache warmup failed: {str(e)}")
+
+
 @app.get("/basin/geojson")
 def get_basin_geojson() -> dict:
     """Get Yellow River Basin boundary as GeoJSON.
@@ -435,9 +541,7 @@ def get_series_multi(
             }
     """
     try:
-        from scripts.query_scenarios import ScenarioQuery
-
-        query = ScenarioQuery(DATA_PARQUET)
+        query = _get_query_instance()
 
         # Parse filters from JSON string
         try:
@@ -717,10 +821,8 @@ def get_page5_data(
 
         sys.path.insert(0, str(Path(__file__).parent.parent))
 
-        from scripts.query_scenarios import ScenarioQuery
-
         # Initialize query engine
-        query = ScenarioQuery(DATA_PARQUET)
+        query = _get_query_instance()
 
         # Define water demand categories
         water_categories = [
@@ -1056,9 +1158,8 @@ metric=cv&top_n=10
     """
     try:
         from scripts.analysis_helpers import sensitivity_test
-        from scripts.query_scenarios import ScenarioQuery
 
-        query_engine = ScenarioQuery(DATA_PARQUET)
+        query_engine = _get_query_instance()
 
         # Parse fixed parameters
         fixed_params_dict = None

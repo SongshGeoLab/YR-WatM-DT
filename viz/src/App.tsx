@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Moon, Sun, FileText, Github, Map, Waves, Users, TreePine, Sprout, Gauge, Activity, CloudRain, Settings } from 'lucide-react';
 
-// Import all page components
-import StudyAreaPage from './components/pages/StudyAreaPage';
-import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
-import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
-import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
-import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
-import WaterDemandCompositionPage from './components/pages/WaterDemandCompositionPage';
-import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
+// Dynamic imports for better performance
+const StudyAreaPage = lazy(() => import('./components/pages/StudyAreaPage'));
+const WaterAvailabilityPage = lazy(() => import('./components/pages/WaterAvailabilityPage'));
+const DemographicsPageOptimized = lazy(() => import('./components/pages/DemographicsPageOptimized'));
+const EcologicalWaterPageSlider = lazy(() => import('./components/pages/EcologicalWaterPageSlider').then(m => ({ default: m.EcologicalWaterPageSlider })));
+const WaterDemandPageWithRealData = lazy(() => import('./components/pages/WaterDemandPageWithRealData'));
+const WaterDemandCompositionPage = lazy(() => import('./components/pages/WaterDemandCompositionPage'));
+const WaterStressIndexPage = lazy(() => import('./components/pages/WaterStressIndexPage'));
 
 // Import global state management
 import { ScenarioProvider, useScenario } from './contexts/ScenarioContext';
@@ -64,16 +64,31 @@ function AppInner() {
   ];
 
   const renderPage = () => {
-    switch (activeTab) {
-      case 0: return <StudyAreaPage />;
-      case 1: return <WaterAvailabilityPage />;
-      case 2: return <DemographicsPageOptimized />;
-      case 3: return <WaterDemandPageWithRealData />; // Page 4
-      case 4: return <WaterDemandCompositionPage />; // Page 5 (Water Composition Analysis)
-      case 5: return <EcologicalWaterPageSlider />; // Page 6
-      case 6: return <WaterStressIndexPage />; // Page 7 (Water Stress Index Analysis)
-      default: return <StudyAreaPage />;
-    }
+    const PageComponent = (() => {
+      switch (activeTab) {
+        case 0: return StudyAreaPage;
+        case 1: return WaterAvailabilityPage;
+        case 2: return DemographicsPageOptimized;
+        case 3: return WaterDemandPageWithRealData; // Page 4
+        case 4: return WaterDemandCompositionPage; // Page 5 (Water Composition Analysis)
+        case 5: return EcologicalWaterPageSlider; // Page 6
+        case 6: return WaterStressIndexPage; // Page 7 (Water Stress Index Analysis)
+        default: return StudyAreaPage;
+      }
+    })();
+
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading page...</p>
+          </div>
+        </div>
+      }>
+        <PageComponent />
+      </Suspense>
+    );
   };
 
   return (

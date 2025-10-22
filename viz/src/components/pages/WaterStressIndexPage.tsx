@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
@@ -137,7 +137,7 @@ const WaterStressIndexChart = React.memo(({
 /**
  * Water Stress Index Page with Global Parameter Integration
  */
-export default function WaterQualityPage() {
+export default memo(function WaterQualityPage() {
   const { scenarioResult, updateParameter, applyPresetScenario } = useScenario();
   const [selectedScenario, setSelectedScenario] = useState('baseline');
   const [presetScenarios, setPresetScenarios] = useState<PresetScenario[]>([]);
@@ -461,4 +461,4 @@ export default function WaterQualityPage() {
       </div>
     </div>
   );
-}
+});
