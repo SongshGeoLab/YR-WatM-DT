@@ -1,123 +1,99 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card } from '../ui/card';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
+import { Card } from '../ui/card';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
-import ExplanationPopover from '../ui/ExplanationPopover';
-
-// Dark mode detection helper
-const isDarkMode = () => {
-  if (typeof window !== 'undefined') {
-    return document.documentElement.classList.contains('dark') ||
-           window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-  return false;
-};
+import { Sprout, Factory } from 'lucide-react';
+import * as api from '../../services/api';
+import WaterDemandComparisonPanel from '../WaterDemandComparisonPanel';
+import { useWaterDemandComparison } from '../../hooks/useWaterDemandComparison';
 
 /**
- * Water Demand Composition Chart Component
- * Shows pie chart of different water demand categories
+ * Irrigation Water Demand Chart Component
  */
-const WaterCompositionChart = React.memo(({
-  irrigationData,
-  productionData,
-  oaData,
-  domesticData,
+const IrrigationWaterDemandChart = React.memo(({
+  data,
   scenarioResult,
-  parameters
+  id
 }: {
-  irrigationData: any;
-  productionData: any;
-  oaData: any;
-  domesticData: any;
+  data: any;
   scenarioResult: any;
-  parameters: any;
+  id: string;
 }) => {
   const plotData = useMemo(() => {
-    if (!irrigationData?.series || !productionData?.series || !oaData?.series || !domesticData?.series) {
-      return [];
+    if (!data?.series) return [];
+
+    const series = data.series;
+    const traces: any[] = [];
+
+    // Add confidence interval if available (multi-scenario mode)
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+      // Lower bound (invisible)
+      traces.push({
+        x: series.time,
+        y: series.ci_lower,
+        type: 'scatter',
+        mode: 'lines',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
+
+      // Upper bound with fill
+      traces.push({
+        x: series.time,
+        y: series.ci_upper,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tonexty',
+        fillcolor: 'rgba(249, 115, 22, 0.2)',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
+      });
     }
 
-    // Get current values (mean for multi-scenario, actual for single scenario)
-    // For irrigation, apply efficiency factor to show real-time parameter impact
-    const getCurrentValue = (data: any, isIrrigation = false) => {
-      const series = data.series;
-      const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-      if (!values || values.length === 0) return 0;
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#f97316', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Irrigation Water Demand (Mean)' : 'Irrigation Water Demand',
+      hovertemplate: 'Year: %{x}<br>Irrigation Water Demand: %{y:.2e}<extra></extra>'
+    });
 
-      // Use the latest value (most recent year)
-      let baseValue = values[values.length - 1];
-
-      // Apply irrigation efficiency factor to irrigation data
-      if (isIrrigation && parameters.irrigationEfficiency !== null) {
-        // Assumption: backend data is at a baseline efficiency (e.g., 0.85)
-        // Higher efficiency = lower water demand (direct proportional)
-        // If efficiency increases from 0.85 to 0.95, demand should decrease
-        // If efficiency decreases from 0.85 to 0.75, demand should increase
-        const BASELINE_EFFICIENCY = 0.85; // Typical baseline
-        const efficiencyRatio = BASELINE_EFFICIENCY / parameters.irrigationEfficiency;
-        baseValue = baseValue * efficiencyRatio;
-      }
-
-      return baseValue;
-    };
-
-    const irrigationValue = getCurrentValue(irrigationData, true); // Apply efficiency factor
-    const productionValue = getCurrentValue(productionData);
-    const oaValue = getCurrentValue(oaData);
-    const domesticValue = getCurrentValue(domesticData);
-
-    const total = irrigationValue + productionValue + oaValue + domesticValue;
-
-    if (total === 0) return [];
-
-    const categories = [
-      { name: 'Irrigation', value: irrigationValue, color: '#1f77b4' },
-      { name: 'Production', value: productionValue, color: '#ff7f0e' },
-      { name: 'Other Activities', value: oaValue, color: '#2ca02c' },
-      { name: 'Domestic', value: domesticValue, color: '#d62728' }
-    ];
-
-    return [{
-      type: 'pie',
-      labels: categories.map(c => c.name),
-      values: categories.map(c => c.value),
-      marker: {
-        colors: categories.map(c => c.color)
-      },
-      textinfo: 'label+percent',
-      textposition: 'outside',
-      hovertemplate: '<b>%{label}</b><br>Value: %{value:.2e}<br>Percentage: %{percent}<extra></extra>'
-    }];
-  }, [irrigationData, productionData, oaData, domesticData, scenarioResult, parameters]);
+    return traces;
+  }, [data, scenarioResult]);
 
   const layout = useMemo(() => ({
-    title: {
-      text: 'Water Demand Composition',
-      font: { size: 16 }
+    margin: { l: 70, r: 30, t: 40, b: 60 },
+    xaxis: {
+      title: 'Year',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 },
+      range: [2020, 2100],
+      dtick: 20
     },
-    margin: { t: 50, b: 20, l: 20, r: 20 },
-    showlegend: true,
-    legend: {
-      orientation: 'v',
-      x: 1.05,
-      y: 0.5
-    }
+    yaxis: {
+      title: 'Water Demand (×10⁸ m³)',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 }
+    },
+    hovermode: 'x unified',
+    showlegend: false,
+    autosize: true
   }), []);
-
-  if (plotData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded">
-        <p className="text-muted-foreground">Loading water demand composition...</p>
-      </div>
-    );
-  }
 
   return (
     <PlotlyChart
-      id="water-composition-chart"
-      title=""
-      description=""
+      id={id}
+      title="Irrigation Water Demand Trends"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Irrigation water demand with confidence intervals across multiple scenarios"
+        : "Irrigation water demand over time"
+      }
       height="400px"
       data={plotData}
       layout={layout}
@@ -126,146 +102,92 @@ const WaterCompositionChart = React.memo(({
 });
 
 /**
- * Total Water Demand Time Series Chart Component
- * Shows total water demand over time with confidence intervals
+ * Production Water Demand Chart Component
  */
-const TotalWaterDemandChart = React.memo(({
-  irrigationData,
-  productionData,
-  oaData,
-  domesticData,
-  scenarioResult
+const ProductionWaterDemandChart = React.memo(({
+  data,
+  scenarioResult,
+  id
 }: {
-  irrigationData: any;
-  productionData: any;
-  oaData: any;
-  domesticData: any;
+  data: any;
   scenarioResult: any;
+  id: string;
 }) => {
   const plotData = useMemo(() => {
-    if (!irrigationData?.series || !productionData?.series || !oaData?.series || !domesticData?.series) {
-      return [];
-    }
+    if (!data?.series) return [];
 
-    const irrigationSeries = irrigationData.series;
-    const productionSeries = productionData.series;
-    const oaSeries = oaData.series;
-    const domesticSeries = domesticData.series;
-
-    // Ensure all series have the same time array
-    const time = irrigationSeries.time;
-
-    // Calculate total water demand for each time point
-    const calculateTotal = (irr: number[], prod: number[], oa: number[], dom: number[]) => {
-      return irr.map((val, i) => val + prod[i] + oa[i] + dom[i]);
-    };
-
+    const series = data.series;
     const traces: any[] = [];
 
-    if (scenarioResult && !scenarioResult.isSingleScenario) {
-      // Multi-scenario mode - show confidence intervals
-      const irrigationMean = irrigationSeries.mean || irrigationSeries.value;
-      const productionMean = productionSeries.mean || productionSeries.value;
-      const oaMean = oaSeries.mean || oaSeries.value;
-      const domesticMean = domesticSeries.mean || domesticSeries.value;
-
-      const totalMean = calculateTotal(irrigationMean, productionMean, oaMean, domesticMean);
-
-      // Add variance for confidence intervals (10% of mean)
-      const variance = totalMean.map(val => val * 0.1);
-      const ciLower = totalMean.map((val, i) => val - variance[i]);
-      const ciUpper = totalMean.map((val, i) => val + variance[i]);
-
+    // Add confidence interval if available (multi-scenario mode)
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
       // Lower bound (invisible)
       traces.push({
-        x: time,
-        y: ciLower,
+        x: series.time,
+        y: series.ci_lower,
         type: 'scatter',
         mode: 'lines',
         line: { width: 0 },
         showlegend: false,
-        hoverinfo: 'skip'
+        hoverinfo: 'skip',
       });
 
       // Upper bound with fill
       traces.push({
-        x: time,
-        y: ciUpper,
+        x: series.time,
+        y: series.ci_upper,
         type: 'scatter',
         mode: 'lines',
         fill: 'tonexty',
-        fillcolor: 'rgba(68, 138, 255, 0.2)',
+        fillcolor: 'rgba(59, 130, 246, 0.2)',
         line: { width: 0 },
         showlegend: false,
-        hoverinfo: 'skip'
-      });
-
-      // Mean line
-      traces.push({
-        x: time,
-        y: totalMean,
-        type: 'scatter',
-        mode: 'lines',
-        line: { color: '#448AFF', width: 3 },
-        name: 'Mean Total Demand',
-        hovertemplate: 'Year: %{x}<br>Total Demand: %{y:.2e}<extra></extra>'
-      });
-    } else {
-      // Single scenario mode
-      const irrigationValues = irrigationSeries.value;
-      const productionValues = productionSeries.value;
-      const oaValues = oaSeries.value;
-      const domesticValues = domesticSeries.value;
-
-      const totalValues = calculateTotal(irrigationValues, productionValues, oaValues, domesticValues);
-
-      traces.push({
-        x: time,
-        y: totalValues,
-        type: 'scatter',
-        mode: 'lines',
-        line: { color: '#448AFF', width: 3 },
-        name: 'Total Water Demand',
-        hovertemplate: 'Year: %{x}<br>Total Demand: %{y:.2e}<extra></extra>'
+        hoverinfo: 'skip',
       });
     }
 
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#3b82f6', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Production Water Demand (Mean)' : 'Production Water Demand',
+      hovertemplate: 'Year: %{x}<br>Production Water Demand: %{y:.2e}<extra></extra>'
+    });
+
     return traces;
-  }, [irrigationData, productionData, oaData, domesticData, scenarioResult]);
+  }, [data, scenarioResult]);
 
   const layout = useMemo(() => ({
-    title: {
-      text: 'Total Water Demand Time Series',
-      font: { size: 16 }
-    },
+    margin: { l: 70, r: 30, t: 40, b: 60 },
     xaxis: {
       title: 'Year',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 },
       range: [2020, 2100],
       dtick: 20
     },
     yaxis: {
-      title: 'Total Water Demand (m³)',
-      type: 'log' // Use log scale for better visualization
+      title: 'Water Demand (×10⁸ m³)',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 }
     },
-    margin: { t: 50, b: 60, l: 80, r: 20 },
     hovermode: 'x unified',
-    showlegend: false
+    showlegend: false,
+    autosize: true
   }), []);
-
-  if (plotData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded">
-        <p className="text-muted-foreground">Loading total water demand data...</p>
-      </div>
-    );
-  }
 
   return (
     <PlotlyChart
-      id="total-water-demand-chart"
-      title=""
-      description=""
-      height="500px"
+      id={id}
+      title="Production Water Demand Trends"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Production water demand with confidence intervals across multiple scenarios"
+        : "Production water demand over time"
+      }
+      height="400px"
       data={plotData}
       layout={layout}
     />
@@ -273,115 +195,131 @@ const TotalWaterDemandChart = React.memo(({
 });
 
 /**
- * Water Demand Page with Real Data Integration
- * Uses global scenario context and real API data
+ * Water Demand Analysis Page with Global Parameter Integration
  */
-const WaterDemandPageWithRealData: React.FC = () => {
+export default function WaterDemandPageWithRealData() {
   const { parameters, updateParameter, scenarioResult } = useScenario();
 
   // Get current parameter values
   const irrigationEfficiency = parameters.irrigationEfficiency;
   const fireGenerationShare = parameters.fireGenerationShare;
 
-  // Fetch all water demand data using global scenario context
-  const { data: irrigationData, loading: irrigationLoading, error: irrigationError } = useScenarioSeries('irrigation_water_demand_province_sum');
-  const { data: productionData, loading: productionLoading, error: productionError } = useScenarioSeries('production_water_demand_province_sum');
-  const { data: oaData, loading: oaLoading, error: oaError } = useScenarioSeries('oa_water_demand_province_sum');
-  const { data: domesticData, loading: domesticLoading, error: domesticError } = useScenarioSeries('domestic_water_demand_province_sum');
+  // Parameter ranges from API
+  const [parameterRanges, setParameterRanges] = useState<{
+    irrigation?: { min: number; max: number; step: number };
+    fire?: { min: number; max: number; step: number };
+  }>({});
 
-  // Loading and error states
-  const isLoading = irrigationLoading || productionLoading || oaLoading || domesticLoading;
-  const hasError = irrigationError || productionError || oaError || domesticError;
+  // Fetch parameter ranges from API
+  useEffect(() => {
+    const fetchParameterRanges = async () => {
+      try {
+        const params = await api.getParams();
 
-  // Calculate statistics
-  const statistics = useMemo(() => {
-    if (!irrigationData?.series || !productionData?.series || !oaData?.series || !domesticData?.series) {
-      return null;
-    }
+        // Get irrigation efficiency parameter range
+        const irrigationParamName = 'water saving irrigation efficiency ratio';
+        const irrigationValues = params[irrigationParamName];
+        if (irrigationValues && irrigationValues.length > 0) {
+          const irrigationMin = Math.min(...irrigationValues);
+          const irrigationMax = Math.max(...irrigationValues);
+          const irrigationStep = irrigationValues.length > 1 ?
+            Math.min(...irrigationValues.slice(1).map((v, i) => Math.abs(v - irrigationValues[i]))) : 0.01;
 
-    const irrigationSeries = irrigationData.series;
-    const productionSeries = productionData.series;
-    const oaSeries = oaData.series;
-    const domesticSeries = domesticData.series;
+          setParameterRanges(prev => ({
+            ...prev,
+            irrigation: { min: irrigationMin, max: irrigationMax, step: irrigationStep }
+          }));
+        }
 
-    // Get current values (latest year)
-    const getLatestValue = (data: any, isIrrigation = false) => {
-      const series = data.series;
-      const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-      if (!values || values.length === 0) return 0;
+        // Get fire generation share parameter range
+        const fireParamName = 'fire generation share province target';
+        const fireValues = params[fireParamName];
+        if (fireValues && fireValues.length > 0) {
+          const fireMin = Math.min(...fireValues);
+          const fireMax = Math.max(...fireValues);
+          const fireStep = fireValues.length > 1 ?
+            Math.min(...fireValues.slice(1).map((v, i) => Math.abs(v - fireValues[i]))) : 0.01;
 
-      let baseValue = values[values.length - 1];
-
-      // Apply irrigation efficiency factor to irrigation data
-      if (isIrrigation && parameters.irrigationEfficiency !== null) {
-        // Same logic as in WaterCompositionChart
-        const BASELINE_EFFICIENCY = 0.85;
-        const efficiencyRatio = BASELINE_EFFICIENCY / parameters.irrigationEfficiency;
-        baseValue = baseValue * efficiencyRatio;
+          setParameterRanges(prev => ({
+            ...prev,
+            fire: { min: fireMin, max: fireMax, step: fireStep }
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch parameter ranges:', error);
+        // Fallback to default ranges
+        setParameterRanges({
+          irrigation: { min: 0.8, max: 1.0, step: 0.01 },
+          fire: { min: 0.1, max: 0.4, step: 0.01 }
+        });
       }
-
-      return baseValue;
     };
 
-    const irrigationValue = getLatestValue(irrigationData, true); // Apply efficiency factor
-    const productionValue = getLatestValue(productionData);
-    const oaValue = getLatestValue(oaData);
-    const domesticValue = getLatestValue(domesticData);
-    const totalValue = irrigationValue + productionValue + oaValue + domesticValue;
+    fetchParameterRanges();
+  }, []);
 
-    return {
-      irrigation: irrigationValue,
-      production: productionValue,
-      oa: oaValue,
-      domestic: domesticValue,
-      total: totalValue,
-      irrigationPercent: totalValue > 0 ? (irrigationValue / totalValue) * 100 : 0,
-      productionPercent: totalValue > 0 ? (productionValue / totalValue) * 100 : 0,
-      oaPercent: totalValue > 0 ? (oaValue / totalValue) * 100 : 0,
-      domesticPercent: totalValue > 0 ? (domesticValue / totalValue) * 100 : 0
-    };
-  }, [irrigationData, productionData, oaData, domesticData, scenarioResult, parameters]);
+  // Fetch data using global scenario context
+  const { data: irrigationData, loading: irrigationLoading, error: irrigationError } = useScenarioSeries('irrigation water demand province sum');
+  const { data: productionData, loading: productionLoading, error: productionError } = useScenarioSeries('production water demand province sum');
+
+  // Get comparison data
+  const comparisonData = useWaterDemandComparison();
+
+  // Loading state
+  const isLoading = irrigationLoading || productionLoading;
+  const hasError = irrigationError || productionError;
 
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
       <div className="flex items-center gap-6 mb-6">
         <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-          </svg>
+          <Sprout className="w-8 h-8" />
         </div>
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Water Demand Analysis</h1>
             <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-sm font-medium">
-              Page 5 - Real Data 🌐
+              Page 4
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {isLoading ? 'Loading real water demand data...' :
+            {isLoading ? 'Loading data...' :
              hasError ? 'Error loading data' :
              scenarioResult?.isSingleScenario ?
                `Scenario: ${scenarioResult.primaryScenario}` :
                `Multiple Scenarios (${scenarioResult?.count || '?'})`
-            } | Irrigation & Production Water Demand Analysis
+            } | Irrigation & Production Water Demand
           </p>
         </div>
       </div>
 
-      <div className="space-y-6 h-[calc(100%-4rem)]">
-        {/* Parameter Controls */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Irrigation Efficiency */}
-          <div className="space-y-2">
+      {/* Parameter Controls - Top Row */}
+      <div className="mb-6">
+        <div className="text-foreground text-base leading-relaxed mb-4">
+          <p>
+            <span className="font-medium">Water demand patterns vary significantly across different sectors.</span>
+            Irrigation and production water demands are influenced by agricultural efficiency,
+            industrial development, and energy generation policies across the Yellow River Basin.
+          </p>
+          {isLoading && (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
+              🌐 Loading global scenario data...
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Irrigation Efficiency Parameter */}
+          <div className="space-y-3">
             {irrigationEfficiency !== null ? (
               <ParameterSlider
-                label="Irrigation Efficiency (Global)"
-                min={0.8}
-                max={1.0}
-                step={0.05}
+                label="Irrigation Intensity"
+                min={parameterRanges.irrigation?.min || 0.8}
+                max={parameterRanges.irrigation?.max || 1.0}
+                step={parameterRanges.irrigation?.step || 0.01}
                 defaultValue={irrigationEfficiency}
                 unit=""
-                description="Water-saving irrigation efficiency ratio - affects all pages"
+                description="Efficiency ratio for irrigation water saving - affects all pages"
                 onChange={(v) => updateParameter('irrigationEfficiency', v)}
               />
             ) : (
@@ -399,31 +337,23 @@ const WaterDemandPageWithRealData: React.FC = () => {
             )}
           </div>
 
-          {/* Thermal Power Generation Share */}
-          <div className="space-y-2">
+          {/* Fire Generation Share Parameter */}
+          <div className="space-y-3">
             {fireGenerationShare !== null ? (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Thermal Power Generation Share (Global)
-                  </label>
-                  <ExplanationPopover explanationKey="cooling_water_source" lang="en" iconSize={14} />
-                </div>
-                <ParameterSlider
-                  label=""
-                  min={0.1}
-                  max={0.4}
-                  step={0.05}
-                  defaultValue={fireGenerationShare}
-                  unit=""
-                  description="Share of thermal (fossil fuel) power in total electricity generation - affects all pages"
-                  onChange={(v) => updateParameter('fireGenerationShare', v)}
-                />
-              </div>
+              <ParameterSlider
+                label="Fire Generation Share Province Target (Global)"
+                min={parameterRanges.fire?.min || 0.1}
+                max={parameterRanges.fire?.max || 0.4}
+                step={parameterRanges.fire?.step || 0.01}
+                defaultValue={fireGenerationShare}
+                unit=""
+                description="Target share of thermal power generation - affects all pages"
+                onChange={(v) => updateParameter('fireGenerationShare', v)}
+              />
             ) : (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  Thermal Power Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
+                  Fire Generation Share: <span className="font-medium text-foreground">Any value (Multiple scenarios)</span>
                 </p>
                 <button
                   onClick={() => updateParameter('fireGenerationShare', 0.25)}
@@ -435,85 +365,63 @@ const WaterDemandPageWithRealData: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Main Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-          {/* Left: Water Demand Composition */}
-          <div className="h-[400px]">
-            <WaterCompositionChart
-              irrigationData={irrigationData}
-              productionData={productionData}
-              oaData={oaData}
-              domesticData={domesticData}
+      {/* Charts - Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Irrigation Water Demand Chart */}
+        <div className="h-[400px]">
+          {irrigationData ? (
+            <IrrigationWaterDemandChart
+              data={irrigationData}
               scenarioResult={scenarioResult}
-              parameters={parameters}
+              id="irrigation-water-demand-chart"
             />
-          </div>
-
-          {/* Right: Total Water Demand Time Series */}
-          <div className="h-[500px]">
-            <TotalWaterDemandChart
-              irrigationData={irrigationData}
-              productionData={productionData}
-              oaData={oaData}
-              domesticData={domesticData}
-              scenarioResult={scenarioResult}
-            />
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-muted/20 rounded">
+              <p className="text-muted-foreground">Loading irrigation water demand data...</p>
+            </div>
+          )}
         </div>
 
-        {/* Statistics Panel */}
-        {statistics && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
-            <Card className="p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {statistics.irrigationPercent.toFixed(1)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Irrigation</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {statistics.irrigation.toExponential(2)} m³
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {statistics.productionPercent.toFixed(1)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Production</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {statistics.production.toExponential(2)} m³
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {statistics.oaPercent.toFixed(1)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Other Activities</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {statistics.oa.toExponential(2)} m³
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {statistics.domesticPercent.toFixed(1)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Domestic</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {statistics.domestic.toExponential(2)} m³
-                </div>
-              </div>
-            </Card>
+        {/* Production Water Demand Chart */}
+        <div className="h-[400px]">
+          {productionData ? (
+            <ProductionWaterDemandChart
+              data={productionData}
+              scenarioResult={scenarioResult}
+              id="production-water-demand-chart"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-muted/20 rounded">
+              <p className="text-muted-foreground">Loading production water demand data...</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Comparison Panel - Bottom Row */}
+      <div className="mt-6">
+        {comparisonData.loading ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">Loading comparison data...</p>
+          </div>
+        ) : comparisonData.error ? (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-red-600">Error loading data: {comparisonData.error}</p>
+          </div>
+        ) : comparisonData.irrigation && comparisonData.production ? (
+          <WaterDemandComparisonPanel
+            irrigation={comparisonData.irrigation}
+            production={comparisonData.production}
+            className="h-[200px]"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-[200px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">No comparison data available</p>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default WaterDemandPageWithRealData;
+}

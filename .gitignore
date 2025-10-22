@@ -135,6 +135,7 @@ tmp
 data
 .DS_Store
 data.zip
+*.tar.gz
 
 # -------- Frontend (viz/) --------
 viz/node_modules/
@@ -147,4 +148,4 @@ viz/.turbo/
 viz/.env.local
 viz/.env.*.local
 backup_*/
-reports/
+data_parquet/cache

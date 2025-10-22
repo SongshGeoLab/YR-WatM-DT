@@ -1,3 +1,10 @@
+#!/usr/bin/env python 3.11.0
+# -*-coding:utf-8 -*-
+# @Author  : Shuang (Twist) Song
+# @Contact   : SongshGeo@gmail.com
+# GitHub   : https://github.com/SongshGeo
+# Website: https://cv.songshgeo.com/
+
 """Flexible scenario data query utility for analysis workflows.
 
 This module provides robust functions to filter scenarios by parameter constraints
@@ -27,7 +34,7 @@ wide_data = query.get_series_wide(
     variable="GDP per capita",
     filters={"Diet change scenario switch": 1},
     index_col="time",
-    columns_col="water-saving irrigation efficiency ratio"
+    columns_col="water saving irrigation efficiency ratio"
 )
 # Returns pivoted DataFrame: rows=time, columns=parameter values
 
@@ -36,7 +43,9 @@ Google-style docstrings are used throughout.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -52,11 +61,16 @@ class ScenarioQuery:
         time: Cached DataFrame of time vector [step, time]
     """
 
-    def __init__(self, data_dir: Union[str, Path] = "data_parquet"):
+    def __init__(
+        self,
+        data_dir: Union[str, Path] = "data_parquet",
+        cache_dir: Optional[Path] = None,
+    ):
         """Initialize query engine and load metadata.
 
         Args:
             data_dir: Path to Parquet data directory (default: "data_parquet")
+            cache_dir: Optional path to cache directory (defaults to data_dir/cache)
         """
         self.data_dir = Path(data_dir)
         if not self.data_dir.exists():
@@ -68,6 +82,7 @@ class ScenarioQuery:
 
         # Extract parameter columns (all except scenario_name)
         self.param_cols = [c for c in self.scenarios.columns if c != "scenario_name"]
+
         # Load variable name mapping (original -> safe)
         self.variables_map_path = self.data_dir / "variables_map.json"
         self.variables_map: Dict[str, str] = {}
@@ -75,6 +90,114 @@ class ScenarioQuery:
             self.variables_map = json.loads(
                 self.variables_map_path.read_text(encoding="utf-8")
             )
+
+        # Setup cache (skip directory creation in Docker environment)
+        self.cache_dir = cache_dir or (self.data_dir / "cache")
+        # Skip directory creation in Docker environment (read-only filesystem)
+        # self.cache_dir.mkdir(exist_ok=True)
+
+        # In-memory cache for frequently accessed queries
+        self.query_cache: Dict[str, pl.DataFrame] = {}
+        self.cache_max_size = 100  # Maximum number of cached queries
+        self._cache_lock = threading.Lock()  # Thread safety for cache operations
+
+        # Pre-computed default scenario cache
+        self.default_scenario_cache: Dict[str, pl.DataFrame] = {}
+
+        # Initialize default scenario cache
+        self._initialize_default_cache()
+
+    def _generate_cache_key(
+        self,
+        variables: Union[str, List[str]],
+        filters: Optional[Dict],
+        time_range: Optional[Tuple[float, float]],
+    ) -> str:
+        """Generate a unique cache key for a query.
+
+        Args:
+            variables: Variable name(s) to query
+            filters: Parameter filters
+            time_range: Time range tuple
+
+        Returns:
+            Unique string key for caching
+        """
+        # Normalize variables to list
+        if isinstance(variables, str):
+            variables = [variables]
+
+        # Create a deterministic key
+        key_data = {
+            "variables": sorted(variables),
+            "filters": filters or {},
+            "time_range": time_range,
+        }
+
+        # Convert to JSON string and hash
+        key_str = json.dumps(key_data, sort_keys=True)
+        return hashlib.md5(key_str.encode()).hexdigest()
+
+    def _is_default_scenario(self, filters: Optional[Dict]) -> bool:
+        """Check if filters represent the default scenario (all parameters Any/null).
+
+        Args:
+            filters: Parameter filters to check
+
+        Returns:
+            True if this is a default scenario query
+        """
+        if not filters:
+            return True
+
+        # Check if all filter values are lists (representing "Any" logic)
+        for value in filters.values():
+            if not isinstance(value, list):
+                return False
+
+        return True
+
+    def _initialize_default_cache(self):
+        """Pre-compute results for default scenarios (all parameters Any).
+
+        This pre-computes the most common query pattern to improve performance.
+        """
+        print("🔄 Initializing default scenario cache...")
+
+        # Get list of available variables that have scenario_name column
+        available_vars = []
+        for file_path in self.data_dir.glob("*.parquet"):
+            if file_path.name not in ["scenarios.parquet", "time.parquet"]:
+                var_name = file_path.stem
+
+                # Check if this file has scenario_name column (scenario-based data)
+                try:
+                    df = pl.read_parquet(file_path)
+                    if "scenario_name" in df.columns:
+                        # Convert safe name back to original if possible
+                        original_name = next(
+                            (k for k, v in self.variables_map.items() if v == var_name),
+                            var_name,
+                        )
+                        available_vars.append(original_name)
+                except Exception as e:
+                    print(f"  ⚠️  Skipping {var_name}: {e}")
+                    continue
+
+        # Pre-compute default scenario for each variable
+        for var in available_vars[
+            :10
+        ]:  # Limit to first 10 variables to avoid long startup
+            try:
+                print(f"  📊 Pre-computing default scenario for {var}...")
+                result = self._compute_series(var, None, None, include_params=True)
+                self.default_scenario_cache[var] = result
+            except Exception as e:
+                print(f"  ⚠️  Failed to pre-compute {var}: {e}")
+
+        print(
+            f"✅ Default cache initialized with {len(self.default_scenario_cache)} variables"
+        )
 
     def filter_scenarios(
         self, filters: Dict[str, Union[float, int, str, List]]
@@ -112,6 +235,70 @@ class ScenarioQuery:
 
         return df
 
+    def _compute_series(
+        self,
+        variables: Union[str, List[str]],
+        filters: Optional[Dict[str, Union[float, int, str, List]]] = None,
+        time_range: Optional[Tuple[float, float]] = None,
+        include_params: bool = True,
+    ) -> pl.DataFrame:
+        """Internal method to compute series without caching.
+
+        This is the original get_series logic extracted for reuse.
+        """
+        if isinstance(variables, str):
+            variables = [variables]
+
+        # Filter scenarios first
+        if filters:
+            scenarios = self.filter_scenarios(filters)
+            scenario_names = scenarios.get_column("scenario_name").to_list()
+        else:
+            scenarios = self.scenarios
+            scenario_names = scenarios.get_column("scenario_name").to_list()
+
+        # Limit number of scenarios to prevent memory issues
+        MAX_SCENARIOS = 1000
+        if len(scenario_names) > MAX_SCENARIOS:
+            print(
+                f"⚠️  Warning: Query matches {len(scenario_names)} scenarios, limiting to {MAX_SCENARIOS}"
+            )
+            scenario_names = scenario_names[:MAX_SCENARIOS]
+
+        # Load and concatenate variable data
+        dfs = []
+        for var in variables:
+            # Support original name or safe name
+            safe = self.variables_map.get(var, var)
+            var_file = self.data_dir / f"{safe}.parquet"
+            if not var_file.exists():
+                raise FileNotFoundError(f"Variable file not found: {var_file}")
+
+            # Use lazy evaluation to optimize memory usage
+            df = (
+                pl.scan_parquet(var_file)
+                .filter(pl.col("scenario_name").is_in(scenario_names))
+                .collect()
+            )
+            dfs.append(df)
+
+        # Union all variables
+        result = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
+
+        # Join time
+        result = result.join(self.time, on="step", how="left")
+
+        # Filter time range if specified
+        if time_range:
+            start, end = time_range
+            result = result.filter((pl.col("time") >= start) & (pl.col("time") <= end))
+
+        # Join parameters if requested
+        if include_params:
+            result = result.join(scenarios, on="scenario_name", how="left")
+
+        return result
+
     def get_series(
         self,
         variables: Union[str, List[str]],
@@ -119,7 +306,7 @@ class ScenarioQuery:
         time_range: Optional[Tuple[float, float]] = None,
         include_params: bool = True,
     ) -> pl.DataFrame:
-        """Retrieve time series for variable(s) under filtered scenarios.
+        """Retrieve time series for variable(s) under filtered scenarios with caching.
 
         Args:
             variables: Variable name(s) to retrieve (e.g., "Total population" or ["var1", "var2"])
@@ -146,47 +333,99 @@ class ScenarioQuery:
             >>> print(data.columns)
             # ['scenario_name', 'variable', 'step', 'time', 'value', 'Fertility Variation', ...]
         """
-        if isinstance(variables, str):
-            variables = [variables]
+        # Generate cache key
+        cache_key = self._generate_cache_key(variables, filters, time_range)
 
-        # Filter scenarios first
-        if filters:
-            scenarios = self.filter_scenarios(filters)
-            scenario_names = scenarios.get_column("scenario_name").to_list()
-        else:
-            scenarios = self.scenarios
-            scenario_names = scenarios.get_column("scenario_name").to_list()
+        # Check in-memory cache first
+        with self._cache_lock:
+            if cache_key in self.query_cache:
+                print(f"🎯 Cache hit for query: {variables}")
+                return self.query_cache[cache_key]
 
-        # Load and concatenate variable data
-        dfs = []
-        for var in variables:
-            # Support original name or safe name
-            safe = self.variables_map.get(var, var)
-            var_file = self.data_dir / f"{safe}.parquet"
-            if not var_file.exists():
-                raise FileNotFoundError(f"Variable file not found: {var_file}")
+        # Check default scenario cache for single variable queries
+        if (
+            isinstance(variables, str)
+            and self._is_default_scenario(filters)
+            and variables in self.default_scenario_cache
+        ):
+            print(f"⚡ Default cache hit for: {variables}")
+            result = self.default_scenario_cache[variables].clone()
 
-            df = pl.read_parquet(var_file).filter(
-                pl.col("scenario_name").is_in(scenario_names)
-            )
-            dfs.append(df)
+            # Apply time range filter if specified
+            if time_range:
+                start, end = time_range
+                result = result.filter(
+                    (pl.col("time") >= start) & (pl.col("time") <= end)
+                )
 
-        # Union all variables
-        result = pl.concat(dfs) if len(dfs) > 1 else dfs[0]
+            # Cache the result
+            self._cache_result(cache_key, result)
+            return result
 
-        # Join time
-        result = result.join(self.time, on="step", how="left")
+        # Compute result using internal method
+        print(f"🔄 Computing series for: {variables}")
+        result = self._compute_series(variables, filters, time_range, include_params)
 
-        # Filter time range if specified
-        if time_range:
-            start, end = time_range
-            result = result.filter((pl.col("time") >= start) & (pl.col("time") <= end))
-
-        # Join parameters if requested
-        if include_params:
-            result = result.join(scenarios, on="scenario_name", how="left")
+        # Cache the result
+        self._cache_result(cache_key, result)
 
         return result
+
+    def _cache_result(self, cache_key: str, result: pl.DataFrame):
+        """Cache a query result with thread safety.
+
+        Args:
+            cache_key: Unique key for the query
+            result: DataFrame result to cache
+        """
+        with self._cache_lock:
+            # Manage cache size
+            if len(self.query_cache) >= self.cache_max_size:
+                # Remove oldest entry (simple FIFO)
+                oldest_key = next(iter(self.query_cache))
+                del self.query_cache[oldest_key]
+
+            # Cache the result
+            self.query_cache[cache_key] = result.clone()
+
+        # Skip disk cache in Docker environment (read-only filesystem)
+        # cache_file = self.cache_dir / f"{cache_key}.pkl"
+        # try:
+        #     with open(cache_file, "wb") as f:
+        #         pickle.dump(result, f)
+        # except Exception as e:
+        #     print(f"⚠️  Failed to save cache to disk: {e}")
+
+    def clear_cache(self):
+        """Clear all cached results with thread safety."""
+        with self._cache_lock:
+            self.query_cache.clear()
+            self.default_scenario_cache.clear()
+
+        # Skip disk cache clearing in Docker environment (read-only filesystem)
+        # for cache_file in self.cache_dir.glob("*.pkl"):
+        #     try:
+        #         cache_file.unlink()
+        #     except Exception as e:
+        #         print(f"⚠️  Failed to remove cache file {cache_file}: {e}")
+
+        print("🧹 Cache cleared")
+
+    def get_cache_stats(self) -> Dict[str, int]:
+        """Get cache statistics.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        # Skip disk cache stats in Docker environment (read-only filesystem)
+        # disk_cache_files = len(list(self.cache_dir.glob("*.pkl")))
+        disk_cache_files = 0
+        return {
+            "memory_cache_size": len(self.query_cache),
+            "default_cache_size": len(self.default_scenario_cache),
+            "disk_cache_files": disk_cache_files,
+            "max_memory_cache_size": self.cache_max_size,
+        }
 
     def get_series_wide(
         self,
@@ -343,7 +582,7 @@ def compare_params(
         >>> comparison = compare_params(
         ...     variable="YRB WSI",
         ...     fixed_params={"Fertility Variation": 1.6, "Diet change scenario switch": 1},
-        ...     vary_param="water-saving irrigation efficiency ratio",
+        ...     vary_param="water saving irrigation efficiency ratio",
         ...     time_range=(2020, 2100)
         ... )
         >>> # Result: rows=years, columns=[0.8, 0.9, 1.0] (different irrigation efficiencies)

@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Moon, Sun, FileText, Github, Map, Waves, Users, TreePine, Sprout, Gauge, Activity, CloudRain, Settings } from 'lucide-react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Moon, Sun, FileText, Github, Map, Waves, Users, TreePine, Sprout, Gauge, Activity, CloudRain, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Import all page components
-import StudyAreaPage from './components/pages/StudyAreaPage';
-import WaterAvailabilityPage from './components/pages/WaterAvailabilityPage';
-import DemographicsPageOptimized from './components/pages/DemographicsPageOptimized';
-import { EcologicalWaterPageSlider } from './components/pages/EcologicalWaterPageSlider';
-import WaterDemandPageWithRealData from './components/pages/WaterDemandPageWithRealData';
-import WaterStressIndexPage from './components/pages/WaterStressIndexPage';
-import AgriculturePage from './components/pages/AgriculturePage';
-import RiverAnalysisPage from './components/pages/RiverAnalysisPage';
+// Dynamic imports for better performance
+const StudyAreaPage = lazy(() => import('./components/pages/StudyAreaPage'));
+const WaterAvailabilityPage = lazy(() => import('./components/pages/WaterAvailabilityPage'));
+const DemographicsPageOptimized = lazy(() => import('./components/pages/DemographicsPageOptimized'));
+const EcologicalWaterPageSlider = lazy(() => import('./components/pages/EcologicalWaterPageSlider').then(m => ({ default: m.EcologicalWaterPageSlider })));
+const WaterDemandPageWithRealData = lazy(() => import('./components/pages/WaterDemandPageWithRealData'));
+const WaterDemandCompositionPage = lazy(() => import('./components/pages/WaterDemandCompositionPage'));
+const WaterStressIndexPage = lazy(() => import('./components/pages/WaterStressIndexPage'));
 
 // Import global state management
 import { ScenarioProvider, useScenario } from './contexts/ScenarioContext';
@@ -25,6 +24,7 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showGlobalParams, setShowGlobalParams] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { scenarioResult, loading } = useScenario();
 
   // Initialize dark mode from localStorage or system preference
@@ -50,31 +50,59 @@ function AppInner() {
     }
   }, [isDarkMode]);
 
+  // Initialize sidebar collapsed state from localStorage
+  useEffect(() => {
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState !== null) {
+      setSidebarCollapsed(JSON.parse(savedSidebarState));
+    }
+  }, []);
+
+  // Save sidebar collapsed state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
   };
 
   const tabs = [
-    { name: 'Study Area', icon: Map, color: 'blue' },
-    { name: 'Water Availability', icon: CloudRain, color: 'cyan' },
+    { name: 'Introduction', icon: Map, color: 'blue' },
+    { name: 'Climate Change', icon: CloudRain, color: 'cyan' },
     { name: 'Demographics', icon: Users, color: 'purple' },
+    { name: 'Water Demand', icon: Sprout, color: 'orange' },
+    { name: 'Water Composition', icon: Gauge, color: 'red' },
     { name: 'Ecological Water', icon: TreePine, color: 'green' },
-    { name: 'Agriculture', icon: Sprout, color: 'orange' },
-    { name: 'WSI Focus', icon: Gauge, color: 'red' },
-    { name: 'Water Quality', icon: Activity, color: 'indigo' }
+    { name: 'Water Stress Index', icon: Activity, color: 'indigo' }
   ];
 
   const renderPage = () => {
-    switch (activeTab) {
-      case 0: return <StudyAreaPage />;
-      case 1: return <WaterAvailabilityPage />;
-      case 2: return <DemographicsPageOptimized />;
-      case 3: return <EcologicalWaterPageSlider />;
-      case 4: return <WaterDemandPageWithRealData />;
-      case 5: return <WaterStressIndexPage />;
-      case 6: return <RiverAnalysisPage />;
-      default: return <StudyAreaPage />;
-    }
+    const PageComponent = (() => {
+      switch (activeTab) {
+        case 0: return StudyAreaPage;
+        case 1: return WaterAvailabilityPage;
+        case 2: return DemographicsPageOptimized;
+        case 3: return WaterDemandPageWithRealData; // Page 4
+        case 4: return WaterDemandCompositionPage; // Page 5 (Water Composition Analysis)
+        case 5: return EcologicalWaterPageSlider; // Page 6
+        case 6: return WaterStressIndexPage; // Page 7 (Water Stress Index Analysis)
+        default: return StudyAreaPage;
+      }
+    })();
+
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading page...</p>
+          </div>
+        </div>
+      }>
+        <PageComponent />
+      </Suspense>
+    );
   };
 
   return (
@@ -120,20 +148,48 @@ function AppInner() {
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-card border-r border-border flex flex-col">
-          <nav className="p-4 flex-1">
-            <ul className="space-y-2">
-              {tabs.map((tab, index) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === index;
+        <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-card border-r border-border flex flex-col transition-all duration-300`}>
+          {/* Sidebar Header with Toggle */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-md">
+                    <Waves className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Navigation</h2>
+                    <p className="text-xs text-muted-foreground">7 Analysis Pages</p>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="w-8 h-8 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
 
-                return (
-                  <li key={index}>
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col">
+            {/* Navigation - Only show when expanded */}
+            {!sidebarCollapsed && (
+              <nav className="p-4 flex-1">
+                <ul className="space-y-2">
+                  {tabs.map((tab, index) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === index;
+
+                    return (
+                      <li key={index}>
                         <button
                           onClick={() => setActiveTab(index)}
                           className={`w-full text-left px-3 py-3 rounded-lg transition-all ${
                             isActive
-                          ? `bg-${tab.color}-100 dark:bg-${tab.color}-900/30 text-${tab.color}-700 dark:text-${tab.color}-300 font-medium shadow-sm`
+                              ? `bg-${tab.color}-100 dark:bg-${tab.color}-900/30 text-${tab.color}-700 dark:text-${tab.color}-300 font-medium shadow-sm`
                               : 'text-foreground hover:bg-muted'
                           }`}
                         >
@@ -153,54 +209,58 @@ function AppInner() {
                             </span>
                           </span>
                         </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            )}
 
-          {/* Bottom Actions */}
-          <div className="p-4 border-t border-border">
-            <div className="flex flex-col gap-2">
-              {/* Global Parameters Button */}
-              <button
-                onClick={() => setShowGlobalParams(!showGlobalParams)}
-                className={`w-full px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${
-                  showGlobalParams
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
-                }`}
-                aria-label="Toggle global parameters"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="text-sm font-medium">Parameters</span>
-              </button>
-
-              {/* Other Actions */}
-            <div className="flex items-center justify-center gap-3">
+            {/* Other Actions - Only show when expanded */}
+            {!sidebarCollapsed && (
+              <div className="p-4 border-t border-border">
+                <div className="flex items-center justify-center gap-3">
                   <button
                     onClick={toggleDarkMode}
                     className="w-9 h-9 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
-                  aria-label="Toggle dark mode"
+                    aria-label="Toggle dark mode"
                   >
                     {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                   </button>
                   <button
-                    onClick={() => window.open('https://example.com/paper', '_blank')}
+                    onClick={() => window.open('https://www.nature.com/articles/s43017-025-00718-2', '_blank', 'noopener,noreferrer')}
                     className="w-9 h-9 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
-                  aria-label="View research paper"
+                    aria-label="View research paper"
                   >
                     <FileText className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => window.open('https://github.com/username/yellow-river-analysis', '_blank')}
+                    onClick={() => window.open('https://github.com/SongshGeoLab', '_blank', 'noopener,noreferrer')}
                     className="w-9 h-9 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
-                  aria-label="View source code"
+                    aria-label="View SongshGeoLab on GitHub"
                   >
                     <Github className="w-4 h-4" />
                   </button>
-                  </div>
-            </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Global Parameters Button - Always show at bottom */}
+          <div className="p-4 border-t border-border">
+            <button
+              onClick={() => setShowGlobalParams(!showGlobalParams)}
+              className={`w-full px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                showGlobalParams
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
+              }`}
+              aria-label="Toggle global parameters"
+              title={sidebarCollapsed ? "Parameters" : undefined}
+            >
+              <Settings className="w-4 h-4" />
+              {!sidebarCollapsed && <span className="text-sm font-medium">Parameters</span>}
+            </button>
           </div>
         </div>
 

@@ -1,149 +1,36 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card } from '../ui/card';
+import React, { useMemo, useState, memo } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
-import { ParameterSlider } from '../ui/parameter-slider';
+import { Card } from '../ui/card';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
-import { getWaterStressConfig, WaterStressConfig } from '../../services/config';
-import { AlertTriangle, Droplet, Gauge, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Gauge, Leaf, Scale, Factory, Droplets } from 'lucide-react';
+import { getPresetScenarios, PresetScenario } from '../../services/config';
 
 /**
- * Water Stress Index Gauge Component
- * Shows current water stress level with color-coded gauge
- */
-const WaterStressGauge = React.memo(({
-  currentValue,
-  threshold,
-  config
-}: {
-  currentValue: number;
-  threshold: number;
-  config: WaterStressConfig;
-}) => {
-  const getStressLevel = (value: number) => {
-    if (value < 0.2) return 'low';
-    if (value < threshold) return 'moderate';
-    return 'high';
-  };
-
-  const stressLevel = getStressLevel(currentValue);
-  const color = config?.colors?.[stressLevel] || '#6366f1';
-  const label = config?.labels?.en?.[stressLevel] || 'Unknown';
-
-  // Calculate gauge angle (0-180 degrees)
-  const angle = Math.min(currentValue * 180, 180);
-  const percentage = Math.min(currentValue * 100, 100);
-
-  return (
-    <div className="relative w-64 h-64 mx-auto">
-      {/* Gauge Background */}
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 100">
-        {/* Background Arc */}
-        <path
-          d="M 20 100 A 80 80 0 0 1 180 100"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          className="text-muted-foreground/20"
-        />
-
-        {/* Low Stress Arc */}
-        <path
-          d="M 20 100 A 80 80 0 0 1 56 100"
-          fill="none"
-          stroke={config.colors.low}
-          strokeWidth="8"
-          opacity="0.7"
-        />
-
-        {/* Moderate Stress Arc */}
-        <path
-          d="M 56 100 A 80 80 0 0 1 92 100"
-          fill="none"
-          stroke={config.colors.moderate}
-          strokeWidth="8"
-          opacity="0.7"
-        />
-
-        {/* High Stress Arc */}
-        <path
-          d="M 92 100 A 80 80 0 0 1 180 100"
-          fill="none"
-          stroke={config.colors.high}
-          strokeWidth="8"
-          opacity="0.7"
-        />
-
-        {/* Current Value Arc */}
-        <path
-          d={`M 20 100 A 80 80 0 0 1 ${20 + angle * 0.89} 100`}
-          fill="none"
-          stroke={color}
-          strokeWidth="12"
-          strokeLinecap="round"
-        />
-
-        {/* Needle */}
-        <line
-          x1="100"
-          y1="100"
-          x2={100 + 70 * Math.cos((angle - 90) * Math.PI / 180)}
-          y2={100 + 70 * Math.sin((angle - 90) * Math.PI / 180)}
-          stroke="currentColor"
-          strokeWidth="3"
-          className="text-foreground"
-        />
-
-        {/* Center Dot */}
-        <circle cx="100" cy="100" r="6" fill="currentColor" className="text-foreground" />
-      </svg>
-
-      {/* Center Text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-        <div className="text-3xl font-bold" style={{ color }}>
-          {percentage.toFixed(1)}%
-        </div>
-        <div className="text-sm text-muted-foreground mt-1">
-          {label}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-/**
- * Water Stress Time Series Chart
+ * Water Stress Index Chart Component
  * Shows water stress index over time with threshold lines
  */
-const WaterStressTimeSeriesChart = React.memo(({
-  wsiData,
+const WaterStressIndexChart = React.memo(({
+  data,
   scenarioResult,
-  threshold,
-  config,
-  showThresholds = true
+  id
 }: {
-  wsiData: any;
+  data: any;
   scenarioResult: any;
-  threshold: number;
-  config: WaterStressConfig;
-  showThresholds?: boolean;
+  id: string;
 }) => {
   const plotData = useMemo(() => {
-    if (!wsiData?.series) return [];
+    if (!data?.series) return [];
 
-    const series = wsiData.series;
+    const series = data.series;
     const traces: any[] = [];
 
-    if (scenarioResult && !scenarioResult.isSingleScenario) {
-      // Multi-scenario mode - show confidence intervals
-      const mean = series.mean || series.value;
-      const variance = series.ci_upper ?
-        series.ci_upper.map((val: number, i: number) => val - mean[i]) :
-        mean.map((val: number) => val * 0.1);
-
+    // Add confidence interval if available (multi-scenario mode)
+    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
       // Lower bound (invisible)
       traces.push({
         x: series.time,
-        y: series.ci_lower || mean.map((val: number, i: number) => val - variance[i]),
+        y: series.ci_lower,
         type: 'scatter',
         mode: 'lines',
         line: { width: 0 },
@@ -151,159 +38,95 @@ const WaterStressTimeSeriesChart = React.memo(({
         hoverinfo: 'skip',
       });
 
-      // Upper bound (invisible)
+      // Upper bound with fill
       traces.push({
         x: series.time,
-        y: series.ci_upper || mean.map((val: number, i: number) => val + variance[i]),
+        y: series.ci_upper,
         type: 'scatter',
         mode: 'lines',
-        line: { width: 0 },
-        showlegend: false,
-        hoverinfo: 'skip',
         fill: 'tonexty',
-        fillcolor: 'rgba(99, 102, 241, 0.1)',
-      });
-
-      // Mean line
-      traces.push({
-        x: series.time,
-        y: mean,
-        type: 'scatter',
-        mode: 'lines+markers',
-        name: 'Water Stress Index',
-        line: {
-          color: '#6366f1',
-          width: 3
-        },
-        marker: {
-          size: 4,
-          color: '#6366f1'
-        }
-      });
-    } else {
-      // Single scenario mode
-      traces.push({
-        x: series.time,
-        y: series.value,
-        type: 'scatter',
-        mode: 'lines+markers',
-        name: 'Water Stress Index',
-        line: {
-          color: '#6366f1',
-          width: 3
-        },
-        marker: {
-          size: 4,
-          color: '#6366f1'
-        }
+        fillcolor: 'rgba(99, 102, 241, 0.2)',
+        line: { width: 0 },
+        showlegend: false,
+        hoverinfo: 'skip',
       });
     }
+
+    // Main data line
+    traces.push({
+      x: series.time,
+      y: series.mean || series.value,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#6366f1', width: 3 },
+      name: scenarioResult && !scenarioResult.isSingleScenario ? 'Water Stress Index (Mean)' : 'Water Stress Index',
+      hovertemplate: 'Year: %{x}<br>Water Stress Index: %{y:.3f}<extra></extra>'
+    });
+
+    // Add threshold reference lines
+    // Low Stress threshold (<0.4)
+    traces.push({
+      x: [series.time[0], series.time[series.time.length - 1]],
+      y: [0.4, 0.4],
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#10b981', width: 2, dash: 'dash' },
+      name: 'Low Stress Threshold (<0.4)',
+      hovertemplate: 'Low Stress Threshold: 0.4<br>Water resources abundant<extra></extra>',
+      showlegend: true
+    });
+
+    // High Stress threshold (>0.6)
+    traces.push({
+      x: [series.time[0], series.time[series.time.length - 1]],
+      y: [0.6, 0.6],
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#ef4444', width: 2, dash: 'dash' },
+      name: 'High Stress Threshold (>0.6)',
+      hovertemplate: 'High Stress Threshold: 0.6<br>Critical water scarcity risk<extra></extra>',
+      showlegend: true
+    });
 
     return traces;
-  }, [wsiData, scenarioResult]);
+  }, [data, scenarioResult]);
 
-  const layout = useMemo(() => {
-    const shapes: any[] = [];
-    const annotations: any[] = [];
-
-    if (showThresholds) {
-      // Threshold line
-      shapes.push({
-        type: 'line',
-        x0: 2020,
-        x1: 2100,
-        y0: threshold,
-        y1: threshold,
-        line: {
-          color: '#ef4444',
-          width: 2,
-          dash: 'dash'
-        }
-      });
-
-      // Threshold annotation
-      annotations.push({
-        x: 2080,
-        y: threshold,
-        text: `Critical Threshold (${threshold})`,
-        showarrow: true,
-        arrowhead: 2,
-        ax: 0,
-        ay: -30,
-        font: { color: '#ef4444', size: 12 },
-        bgcolor: 'rgba(255, 255, 255, 0.8)',
-        bordercolor: '#ef4444',
-        borderwidth: 1
-      });
-
-      // Stress level zones
-      shapes.push(
-        {
-          type: 'rect',
-          x0: 2020,
-          x1: 2100,
-          y0: 0,
-          y1: 0.2,
-          fillcolor: config.colors.low,
-          opacity: 0.1,
-          layer: 'below'
-        },
-        {
-          type: 'rect',
-          x0: 2020,
-          x1: 2100,
-          y0: 0.2,
-          y1: threshold,
-          fillcolor: config.colors.moderate,
-          opacity: 0.1,
-          layer: 'below'
-        },
-        {
-          type: 'rect',
-          x0: 2020,
-          x1: 2100,
-          y0: threshold,
-          y1: 1.0,
-          fillcolor: config.colors.high,
-          opacity: 0.1,
-          layer: 'below'
-        }
-      );
-    }
-
-    return {
-      title: 'Water Stress Index Over Time',
-      xaxis: {
-        title: 'Year',
-        range: [2020, 2100],
-        dtick: 20
-      },
-      yaxis: {
-        title: 'Water Stress Index',
-        range: [0, 1],
-        dtick: 0.2
-      },
-      margin: { t: 50, b: 60, l: 80, r: 20 },
-      hovermode: 'x unified',
-      showlegend: true,
-      shapes,
-      annotations
-    };
-  }, [threshold, config, showThresholds]);
-
-  if (plotData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded">
-        <p className="text-muted-foreground">Loading water stress index data...</p>
-      </div>
-    );
-  }
+  const layout = useMemo(() => ({
+    margin: { l: 70, r: 30, t: 40, b: 60 },
+    xaxis: {
+      title: 'Year',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 },
+      range: [2020, 2100],
+      dtick: 20
+    },
+    yaxis: {
+      title: 'Water Stress Index',
+      titlefont: { size: 14 },
+      tickfont: { size: 12 },
+      range: [0, 1], // Fixed Y-axis range
+      dtick: 0.2
+    },
+    hovermode: 'x unified',
+    showlegend: true, // Enable legend to show threshold lines
+    legend: {
+      x: 0.02,
+      y: 0.02, // Move legend to bottom left
+      bgcolor: 'rgba(255,255,255,0.8)',
+      bordercolor: 'rgba(0,0,0,0.2)',
+      borderwidth: 1
+    },
+    autosize: true
+  }), []);
 
   return (
     <PlotlyChart
-      id="water-stress-time-series"
-      title=""
-      description=""
+      id={id}
+      title="Water Stress Index Trends"
+      description={scenarioResult && !scenarioResult.isSingleScenario
+        ? "Water stress index with confidence intervals across multiple scenarios"
+        : "Water stress index over time"
+      }
       height="400px"
       data={plotData}
       layout={layout}
@@ -312,302 +135,337 @@ const WaterStressTimeSeriesChart = React.memo(({
 });
 
 /**
- * Water Stress Index Focus Page
- * Dedicated view for water stress analysis with threshold monitoring
+ * Water Stress Index Page with Global Parameter Integration
  */
-export default function WaterStressIndexPage() {
-  const { parameters, updateParameter, scenarioResult } = useScenario();
-  const [wsiConfig, setWsiConfig] = useState<WaterStressConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(false);
-  const [showThresholds, setShowThresholds] = useState(true);
-  const [customThreshold, setCustomThreshold] = useState(0.4);
+export default memo(function WaterQualityPage() {
+  const { scenarioResult, updateParameter, applyPresetScenario } = useScenario();
+  const [selectedScenario, setSelectedScenario] = useState('pessimistic');
+  const [presetScenarios, setPresetScenarios] = useState<PresetScenario[]>([]);
 
-  // Fetch WSI data
-  const { data: wsiData, loading: wsiLoading, error: wsiError } = useScenarioSeries('yrb_wsi');
-
-  // Load WSI configuration
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        setConfigLoading(true);
-        const config = await getWaterStressConfig();
-        setWsiConfig(config);
-        setCustomThreshold(config.threshold);
-      } catch (error) {
-        console.error('Failed to load WSI config:', error);
-      } finally {
-        setConfigLoading(false);
-      }
-    };
-
-    loadConfig();
+  // Load preset scenarios on mount
+  React.useEffect(() => {
+    getPresetScenarios('en').then(scenarios => {
+      setPresetScenarios(scenarios);
+    });
   }, []);
 
-  // Calculate current WSI value
-  const currentWSI = useMemo(() => {
-    if (!wsiData?.series) return 0;
+  // Get the first three preset scenarios for the buttons, with baseline in the middle
+  const displayScenarios = useMemo(() => {
+    const firstThree = presetScenarios.slice(0, 3);
+    // Reorder to put baseline in the middle: [optimistic, baseline, pessimistic]
+    const baseline = firstThree.find(s => s.id === 'baseline');
+    const others = firstThree.filter(s => s.id !== 'baseline');
+    return [others[0], baseline, others[1]].filter(Boolean);
+  }, [presetScenarios]);
 
-    const series = wsiData.series;
-    const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-
-    if (!values || values.length === 0) return 0;
-
-    // Return the latest value
-    return values[values.length - 1];
-  }, [wsiData, scenarioResult]);
-
-  // Calculate trend
-  const trend = useMemo(() => {
-    if (!wsiData?.series) return 'stable';
-
-    const series = wsiData.series;
-    const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-
-    if (!values || values.length < 2) return 'stable';
-
-    const recent = values.slice(-10); // Last 10 values
-    const first = recent[0];
-    const last = recent[recent.length - 1];
-
-    if (last > first * 1.05) return 'increasing';
-    if (last < first * 0.95) return 'decreasing';
-    return 'stable';
-  }, [wsiData, scenarioResult]);
-
-  const getStressLevel = (value: number) => {
-    if (!wsiConfig) return 'unknown';
-    if (value < 0.2) return 'low';
-    if (value < customThreshold) return 'moderate';
-    return 'high';
+  // Map scenario IDs to icons, colors, and display names
+  const scenarioConfig = {
+    'baseline': {
+      icon: Scale,
+      color: 'bg-blue-500',
+      displayName: 'Balancing economy and sustainability'
+    },
+    'optimistic': {
+      icon: Leaf,
+      color: 'bg-green-500',
+      displayName: 'Radical sustainable transformation'
+    },
+    'pessimistic': {
+      icon: Factory,
+      color: 'bg-red-500',
+      displayName: 'Focusing on economic development'
+    }
   };
 
-  const stressLevel = getStressLevel(currentWSI);
-  const threshold = wsiConfig?.threshold || customThreshold;
+  // Fetch data using global scenario context
+  const { data: wsiData, loading: wsiLoading, error: wsiError } = useScenarioSeries('yrb_wsi');
 
-  if (wsiLoading || configLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading water stress analysis...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (wsiError) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-500">Failed to load water stress data</p>
-        </div>
-      </div>
-    );
-  }
+  // Loading state
+  const isLoading = wsiLoading;
+  const hasError = wsiError;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">Water Stress Index Analysis</h1>
-        <p className="text-muted-foreground">
-          Monitor water stress levels and critical thresholds across different scenarios
-        </p>
-      </div>
-
-      {/* Current Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Current WSI Value */}
-        <Card className="p-6">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Droplet className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Current WSI</p>
-              <p className="text-2xl font-bold">{currentWSI.toFixed(3)}</p>
-              <p className="text-xs text-muted-foreground">
-                {wsiConfig?.labels?.en?.[stressLevel] || 'Unknown'}
-              </p>
-            </div>
+    <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
+      <div className="flex items-center gap-6 mb-6">
+        <div className="w-16 h-16 rounded-full bg-indigo-500 flex items-center justify-center text-white shadow-lg">
+          <Activity className="w-8 h-8" />
+        </div>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold text-foreground">Water Stress Index Analysis</h1>
+            <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">
+              Page 7
+            </span>
           </div>
-        </Card>
-
-        {/* Trend Indicator */}
-        <Card className="p-6">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              {trend === 'increasing' ? (
-                <TrendingUp className="h-6 w-6 text-red-600" />
-              ) : trend === 'decreasing' ? (
-                <TrendingDown className="h-6 w-6 text-green-600" />
-              ) : (
-                <Gauge className="h-6 w-6 text-yellow-600" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Trend</p>
-              <p className="text-2xl font-bold capitalize">{trend}</p>
-              <p className="text-xs text-muted-foreground">Recent trajectory</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Threshold Status */}
-        <Card className="p-6">
-          <div className="flex items-center space-x-4">
-            <div className={`p-3 rounded-lg ${
-              currentWSI >= threshold
-                ? 'bg-red-100 dark:bg-red-900/30'
-                : 'bg-green-100 dark:bg-green-900/30'
-            }`}>
-              <AlertTriangle className={`h-6 w-6 ${
-                currentWSI >= threshold ? 'text-red-600' : 'text-green-600'
-              }`} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Threshold Status</p>
-              <p className="text-2xl font-bold">
-                {currentWSI >= threshold ? 'CRITICAL' : 'SAFE'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Threshold: {threshold}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Water Stress Gauge */}
-        <Card className="p-6">
-          <div className="text-center mb-6">
-            <h3 className="text-lg font-semibold mb-2">Current Water Stress Level</h3>
-            <p className="text-sm text-muted-foreground">
-              Real-time monitoring of water stress index
-            </p>
-          </div>
-          {wsiConfig && (
-            <WaterStressGauge
-              currentValue={currentWSI}
-              threshold={threshold}
-              config={wsiConfig}
-            />
-          )}
-        </Card>
-
-        {/* Controls Panel */}
-        <Card className="p-6">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Analysis Controls</h3>
-
-              {/* Threshold Control */}
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center space-x-2 cursor-pointer mb-2">
-                    <input
-                      type="checkbox"
-                      checked={showThresholds}
-                      onChange={(e) => setShowThresholds(e.target.checked)}
-                      className="rounded"
-                    />
-                    <span className="text-sm font-medium">显示阈值线</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    自定义临界阈值: {customThreshold}
-                  </label>
-                  <ParameterSlider
-                    defaultValue={customThreshold}
-                    onChange={setCustomThreshold}
-                    min={0.1}
-                    max={0.8}
-                    step={0.05}
-                    label=""
-                  />
-                </div>
-
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• <span className="font-medium">低压力 (&lt;0.2)</span>: 水资源充足</p>
-                  <p>• <span className="font-medium">中等压力 (0.2-{customThreshold.toFixed(1)})</span>: 需要关注</p>
-                  <p>• <span className="font-medium">高压力 (&gt;{customThreshold.toFixed(1)})</span>: 临界状态</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Scenario Info */}
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2">当前情景</h4>
-              <div className="text-xs text-muted-foreground space-y-1">
-                {scenarioResult?.isSingleScenario ? (
-                  <p>单一情景: {scenarioResult.primaryScenario}</p>
-                ) : (
-                  <p>多情景模式: 显示置信区间</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Time Series Chart */}
-      <Card className="p-6">
-        <div className="text-center mb-6">
-          <h3 className="text-lg font-semibold mb-2">Water Stress Index Time Series</h3>
-          <p className="text-sm text-muted-foreground">
-            Historical and projected water stress levels with threshold monitoring
+          <p className="text-sm text-muted-foreground mt-1">
+            {isLoading ? 'Loading data...' :
+             hasError ? 'Error loading data' :
+             scenarioResult?.isSingleScenario ?
+               `Scenario: ${scenarioResult.primaryScenario}` :
+               `Multiple Scenarios (${scenarioResult?.count || '?'})`
+            } | Water Stress Index Monitoring & Analysis
           </p>
         </div>
+      </div>
 
-        {wsiData && wsiConfig && (
-          <WaterStressTimeSeriesChart
-            wsiData={wsiData}
-            scenarioResult={scenarioResult}
-            threshold={customThreshold}
-            config={wsiConfig}
-            showThresholds={showThresholds}
-          />
-        )}
-      </Card>
-
-      {/* Interpretation Guide */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Water Stress Index Interpretation</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: wsiConfig?.colors.low }}></div>
-              <span className="font-medium">Low Stress (&lt;0.2)</span>
-            </div>
-            <p className="text-muted-foreground">
-              Water resources are abundant. No immediate water scarcity concerns.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: wsiConfig?.colors.moderate }}></div>
-              <span className="font-medium">Moderate Stress (0.2-{threshold.toFixed(1)})</span>
-            </div>
-            <p className="text-muted-foreground">
-              Water stress is present but manageable. Monitoring and conservation measures recommended.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: wsiConfig?.colors.high }}></div>
-              <span className="font-medium">High Stress (&gt;{threshold.toFixed(1)})</span>
-            </div>
-            <p className="text-muted-foreground">
-              Critical water stress level. Immediate action required to prevent water scarcity.
-            </p>
-          </div>
+      {/* Global Scenario Selection */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">Global Scenario Selection</h2>
+        <p className="text-lg text-muted-foreground mb-6">
+          Select a preset of parameters from three overall scenarios:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {displayScenarios.map((scenario) => {
+            if (!scenario) return null;
+            const config = scenarioConfig[scenario.id as keyof typeof scenarioConfig];
+            const Icon = config?.icon || Scale;
+            const colorClass = config?.color || 'bg-blue-500';
+            return (
+              <Tooltip key={scenario.id}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      setSelectedScenario(scenario.id);
+                      if (applyPresetScenario) {
+                        applyPresetScenario(scenario.parameters);
+                      }
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedScenario === scenario.id
+                        ? `${colorClass} border-transparent text-white`
+                        : 'bg-card border-border hover:border-muted-foreground text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        selectedScenario === scenario.id
+                          ? 'bg-white/20 text-white'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="font-medium">{config?.displayName || scenario.name}</div>
+                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-md">
+                  <div className="space-y-2">
+                    <div className="font-medium text-base">{scenario.name}</div>
+                    <div className="text-sm opacity-90">{scenario.description}</div>
+                    {scenario.story && (
+                      <div className="text-xs opacity-75 italic">{scenario.story}</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
-      </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Left: Water Stress Index Chart */}
+        <div className="min-h-[400px]">
+          {wsiData ? (
+            <WaterStressIndexChart
+              data={wsiData}
+              scenarioResult={scenarioResult}
+              id="water-stress-index-chart"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-muted/20 rounded">
+              <p className="text-muted-foreground">Loading water stress index data...</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Information Panel */}
+        <div className="space-y-4">
+          <div className="text-foreground text-base leading-relaxed">
+            <p>
+              <span className="font-medium">Water Stress Index (WSI) is a key indicator for water resource sustainability.</span>
+              It measures the ratio of water demand to available water supply, providing insights into
+              water scarcity risks and sustainability challenges across the Yellow River Basin.
+            </p>
+            {isLoading && (
+              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
+                🌐 Loading global scenario data...
+              </div>
+            )}
+          </div>
+
+          {/* WSI Interpretation Guide */}
+          <div className="bg-muted/50 dark:bg-muted/20 border border-border rounded-lg p-4">
+            <h4 className="font-medium text-foreground mb-3 text-base">WSI Interpretation Guide</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span className="text-sm text-foreground">
+                  <span className="font-medium">Low Stress (&lt;0.4)</span>: Water resources abundant
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span className="text-sm text-foreground">
+                  <span className="font-medium">Moderate Stress (0.4-0.6)</span>: Monitoring recommended
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <span className="text-sm text-foreground">
+                  <span className="font-medium">High Stress (&gt;0.6)</span>: Critical water scarcity risk
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Scenario Info */}
+          {scenarioResult && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue/to-20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                  <Gauge className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-200">
+                  Scenario Analysis
+                </h4>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-700 dark:text-blue-300">
+                    Analysis Mode:
+                  </span>
+                  <span className="font-bold text-blue-900 dark:text-blue-100">
+                    {scenarioResult.isSingleScenario ? 'Single Scenario' : 'Multi-Scenario'}
+                  </span>
+                </div>
+
+                {scenarioResult.isSingleScenario && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-700 dark:text-blue-300">
+                      Scenario ID:
+                    </span>
+                    <span className="font-bold text-blue-900 dark:text-blue-100">
+                      {scenarioResult.primaryScenario}
+                    </span>
+                  </div>
+                )}
+
+                {!scenarioResult.isSingleScenario && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-700 dark:text-blue-300">
+                      Scenarios Count:
+                    </span>
+                    <span className="font-bold text-blue-900 dark:text-blue-100">
+                      {scenarioResult.count || '?'}
+                    </span>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-blue-200 dark:border-blue-700">
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    {scenarioResult.isSingleScenario
+                      ? 'Showing precise values for selected scenario'
+                      : 'Showing mean values with confidence intervals'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* WSI Threshold Monitors */}
+      <div className="mt-12">
+        {wsiData?.series ? (
+          <div className="grid grid-cols-3 gap-4">
+            {([0.8, 0.6, 0.4] as number[]).map((threshold, idx) => {
+              const series = wsiData.series;
+              const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
+              const time = series.time;
+              let firstYear: number | null = null;
+              let continuousYears = 0;
+              if (Array.isArray(values) && Array.isArray(time) && values.length === time.length) {
+                // Only consider data from 2020 onwards
+                let startIndex = -1;
+                for (let i = 0; i < values.length; i++) {
+                  const year = time[i];
+                  if (year >= 2020) {
+                    const v = values[i] as number;
+                    if (typeof v === 'number' && v < threshold) {
+                      firstYear = year;
+                      startIndex = i;
+                      break;
+                    }
+                  }
+                }
+                if (startIndex >= 0) {
+                  // Count continuous integer years crossed
+                  let yearCount = 0;
+                  let lastYear = Math.floor(time[startIndex]);
+
+                  for (let j = startIndex; j < values.length; j++) {
+                    const v = values[j] as number;
+                    const currentYear = Math.floor(time[j]);
+
+                    if (typeof v === 'number' && v < threshold) {
+                      // If we've moved to a new year, increment count
+                      if (currentYear > lastYear) {
+                        yearCount++;
+                        lastYear = currentYear;
+                      }
+                    } else {
+                      // Threshold exceeded, stop counting
+                      break;
+                    }
+                  }
+
+                  // Add 1 for the initial year
+                  continuousYears = yearCount + 1;
+                }
+              }
+
+              const palette = idx === 0
+                ? { bg: 'from-rose-50 to-red-50', darkBg: 'from-rose-900/20 to-red-900/20', border: 'border-red-200 dark:border-red-800', circle: 'bg-red-500', text: 'text-red-900 dark:text-red-200' }
+                : idx === 1
+                ? { bg: 'from-amber-50 to-yellow-50', darkBg: 'from-amber-900/20 to-yellow-900/20', border: 'border-amber-200 dark:border-amber-800', circle: 'bg-amber-500', text: 'text-amber-900 dark:text-amber-200' }
+                : { bg: 'from-emerald-50 to-green-50', darkBg: 'from-emerald-900/20 to-green-900/20', border: 'border-emerald-200 dark:border-emerald-800', circle: 'bg-emerald-500', text: 'text-emerald-900 dark:text-emerald-200' };
+
+              return (
+                <div key={threshold} className={`bg-gradient-to-br ${palette.bg} dark:${palette.darkBg} border ${palette.border} rounded-lg p-4`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-8 h-8 rounded-full ${palette.circle} flex items-center justify-center`}>
+                      <Droplets className="w-4 h-4 text-white" />
+                    </div>
+                    <h4 className={`font-semibold ${palette.text}`}>WSI &lt; {threshold}</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${palette.text} opacity-80`}>First Year</span>
+                      <span className={`font-bold ${palette.text}`}>
+                        {firstYear ? Math.round(firstYear) : (threshold === 0.4 ? 'Never' : '—')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${palette.text} opacity-80`}>Continuous Years</span>
+                      <span className={`font-bold ${palette.text}`}>
+                        {continuousYears > 0 ? continuousYears : (threshold === 0.4 ? 'Never' : '—')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">Based on {scenarioResult?.isSingleScenario ? 'single scenario' : 'multi-scenario mean'} (2020+)</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-[120px] bg-muted/20 rounded">
+            <p className="text-muted-foreground">Loading WSI threshold monitors...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+});

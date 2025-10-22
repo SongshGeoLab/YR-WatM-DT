@@ -42,12 +42,12 @@
         "cn": "最优情景，采取积极的气候行动、技术进步和强有力的环境政策。"
       },
       "parameters": {
-        "climateScenario": 1,
-        "fertility": 1.6,
-        "dietPattern": 1,
-        "ecologicalFlow": 0.3,
-        "irrigationEfficiency": 1.0,
-        "fireGenerationShare": 0.1
+        "climateScenario": 2,
+        "fertility": 1.8,
+        "dietPattern": 3,
+        "ecologicalFlow": 0.2,
+        "irrigationEfficiency": 0.8,
+        "fireGenerationShare": 0.4
       },
       "color": "#10b981",
       "icon": "optimistic"
@@ -67,12 +67,12 @@
         "cn": "最差情景，持续高排放、技术采用缓慢、环境政策薄弱。"
       },
       "parameters": {
-        "climateScenario": 3,
-        "fertility": 1.8,
-        "dietPattern": 3,
-        "ecologicalFlow": 0.2,
-        "irrigationEfficiency": 0.8,
-        "fireGenerationShare": 0.4
+        "climateScenario": 1,
+        "fertility": 1.6,
+        "dietPattern": 1,
+        "ecologicalFlow": 0.3,
+        "irrigationEfficiency": 1.0,
+        "fireGenerationShare": 0.1
       },
       "color": "#ef4444",
       "icon": "pessimistic"

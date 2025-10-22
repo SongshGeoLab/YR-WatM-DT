@@ -1,14 +1,35 @@
 """FastAPI server exposing Parquet-backed data endpoints for visualization.
 
-Endpoints
+Core Endpoints:
     GET  /variables                 -> list of variable names (excluding TIME)
     GET  /params                    -> mapping of parameter name -> unique values
     POST /resolve_scenario          -> resolve scenario_name from parameter values
     GET  /time                      -> time vector [{step, time}, ...]
-    GET  /series                    -> variable series for scenario (optional window)
+    GET  /series                    -> variable series for single scenario (optional window)
+    GET  /series/multi              -> variable series for multiple scenarios with "Any" logic
+    GET  /series/statistics         -> peak/valley/trend statistics for time series
 
-Run
-    poetry run uvicorn scripts.api_server:app --host 0.0.0.0 --port 8000
+Analysis Endpoints:
+    GET  /analysis/sensitivity      -> sensitivity analysis for parameter impacts (NEW)
+
+Configuration Endpoints:
+    GET  /config/terminology        -> parameter display labels
+    GET  /config/scenarios_preset   -> predefined scenario combinations
+    GET  /config/water_stress       -> water stress thresholds
+    GET  /config/explanations/{key} -> explanation content
+
+Data Endpoints:
+    GET  /climate-data              -> RCP scenario climate data
+    GET  /yellow-river-basin        -> basin boundary GeoJSON
+    GET  /basin/geojson             -> basin boundary GeoJSON (alias)
+    GET  /page5-data                -> water demand analysis
+
+Run:
+    make dev                        -> full-stack dev server (recommended)
+    poetry run uvicorn scripts.api_server:app --host 0.0.0.0 --port 8000 --reload
+
+API Docs:
+    http://127.0.0.1:8000/docs      -> interactive API documentation
 
 Google-style docstrings are used.
 """
@@ -16,9 +37,10 @@ Google-style docstrings are used.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -38,6 +60,21 @@ DATA_PARQUET = Path("data_parquet")
 DATA_DIR = Path("data")
 GEOJSON_CACHE: Dict[str, dict] = {}
 _VARIABLES_MAP_CACHE: Optional[Dict[str, str]] = None  # original_name -> safe_name
+
+# Global query instance for caching
+_query_instance: Optional[Any] = None
+
+
+def _get_query_instance() -> Any:
+    """Get or create global query instance with caching enabled."""
+    global _query_instance
+    if _query_instance is None:
+        print("🚀 Initializing ScenarioQuery with caching...")
+        from scripts.query_scenarios import ScenarioQuery
+
+        _query_instance = ScenarioQuery(DATA_PARQUET)
+        print("✅ ScenarioQuery initialized with cache")
+    return _query_instance
 
 
 def _read_variables() -> List[str]:
@@ -138,9 +175,19 @@ def _get_basin_geojson() -> dict:
 app = FastAPI(title="Decision Theater API", version="0.1.0")
 
 # Allow local dev frontends (Dash, Vite, etc.)
+# NOTE: For production, set API_CORS_ALLOW_ORIGINS environment variable to restrict origins
+# Development default allows all origins for easier testing
+_allowed_origins_env = os.getenv("API_CORS_ALLOW_ORIGINS", "")
+if _allowed_origins_env:
+    # Production: use specific origins from environment
+    _allowed_origins = _allowed_origins_env.split(",")
+else:
+    # Development: allow all origins
+    _allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -162,17 +209,23 @@ def root() -> dict:
             "/resolve_scenario",
             "/time",
             "/series?variable=YRB%20WSI&scenario=sc_0",
+            '/series/multi?variable=YRB%20WSI&filters={"Climate change scenario switch for water yield": 2}&aggregate=true',
+            "/series/statistics?variable=YRB%20WSI&scenario=sc_0",
+            "/analysis/sensitivity?vary_param=Fertility%20Variation&metric=cv&top_n=10",
             "/basin/geojson",
             "/config/terminology",
             "/config/scenarios_preset",
             "/config/explanations",
             "/config/water_stress",
+            "/page5-data",
+            "/climate-data",
+            "/yellow-river-basin",
         ],
     }
 
 
 @app.get("/config/terminology")
-def get_terminology(lang: str = Query("en", regex="^(en|cn)$")) -> Dict[str, Any]:
+def get_terminology(lang: str = Query("en", pattern="^(en|cn)$")) -> Dict[str, Any]:
     """Get terminology mappings for parameter display labels.
 
     Args:
@@ -187,7 +240,7 @@ def get_terminology(lang: str = Query("en", regex="^(en|cn)$")) -> Dict[str, Any
 
 @app.get("/config/scenarios_preset")
 def get_scenarios_preset(
-    lang: str = Query("en", regex="^(en|cn)$"),
+    lang: str = Query("en", pattern="^(en|cn)$"),
 ) -> List[Dict[str, Any]]:
     """Get preset scenario configurations.
 
@@ -214,7 +267,7 @@ def get_water_stress_config() -> Dict[str, Any]:
 
 @app.get("/config/explanations/{key}")
 def get_explanation(
-    key: str, lang: str = Query("en", regex="^(en|cn)$")
+    key: str, lang: str = Query("en", pattern="^(en|cn)$")
 ) -> Dict[str, Any]:
     """Get explanation content for a specific topic.
 
@@ -237,6 +290,97 @@ def get_explanation(
         )
 
     return explanation
+
+
+@app.get("/cache/stats")
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics and performance metrics.
+
+    Returns:
+        Dictionary with cache statistics including memory usage, hit rates, etc.
+    """
+    try:
+        query = _get_query_instance()
+        stats = query.get_cache_stats()
+
+        # Add additional performance metrics
+        stats.update(
+            {
+                "cache_enabled": True,
+                "default_scenarios_precomputed": len(query.default_scenario_cache),
+                "cache_directory": str(query.cache_dir),
+            }
+        )
+
+        return stats
+    except Exception as e:
+        return {"cache_enabled": False, "error": str(e)}
+
+
+@app.post("/cache/clear")
+def clear_cache() -> Dict[str, str]:
+    """Clear all cached query results.
+
+    Returns:
+        Success message.
+    """
+    try:
+        query = _get_query_instance()
+        query.clear_cache()
+        return {"message": "Cache cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+
+@app.get("/cache/warmup")
+def warmup_cache() -> Dict[str, Any]:
+    """Warm up cache with common queries.
+
+    This endpoint pre-computes frequently used queries to improve performance.
+
+    Returns:
+        Statistics about the warmup process.
+    """
+    try:
+        query = _get_query_instance()
+
+        # Get list of common variables
+        variables = _read_variables()[:5]  # Limit to first 5 variables
+
+        warmup_stats: Dict[str, Any] = {
+            "variables_processed": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "errors": [],
+        }
+
+        # Warm up default scenarios (already done in initialization)
+        warmup_stats["default_scenarios"] = len(query.default_scenario_cache)
+
+        # Warm up some common filter combinations
+        common_filters = [
+            {
+                "Climate change scenario switch for water yield": [1, 2]
+            },  # RCP2.6 & RCP4.5
+            {"Fertility Variation": 1.7},  # Default fertility
+            {"Diet change scenario switch": 2},  # Default diet
+        ]
+
+        for var in variables:
+            for filters in common_filters:
+                try:
+                    # This will either hit cache or compute and cache
+                    query.get_series(var, filters=filters)
+                    warmup_stats["variables_processed"] = (
+                        warmup_stats["variables_processed"] + 1
+                    )
+                except Exception as e:
+                    cast(List[str], warmup_stats["errors"]).append(f"{var}: {str(e)}")
+
+        return warmup_stats
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache warmup failed: {str(e)}")
 
 
 @app.get("/basin/geojson")
@@ -290,8 +434,14 @@ def resolve_scenario(body: ResolveRequest) -> Dict[str, str]:
         raise HTTPException(
             status_code=404, detail="No scenario matches the selected parameters"
         )
-    scenario_name = matched.get_column("scenario_name").item()
-    return {"scenario_name": scenario_name}
+    elif matched.height == 1:
+        scenario_name = matched.get_column("scenario_name").item()
+        return {"scenario_name": scenario_name}
+    else:
+        # Multiple scenarios match (e.g., with and without SNWTP) - return the first one
+        # This is for backward compatibility with frontend that expects a single scenario
+        scenario_name = matched.get_column("scenario_name").item(0)
+        return {"scenario_name": scenario_name}
 
 
 @app.get("/time")
@@ -330,6 +480,216 @@ def get_series(
             "value": df.get_column("value").to_list(),
         },
     }
+
+
+@app.get("/series/multi")
+def get_series_multi(
+    variable: str = Query(..., description="Variable name to query"),
+    filters: str = Query(
+        ...,
+        description="JSON string with parameter filters. Supports lists for 'Any' logic, e.g. '{\"Fertility Variation\": [1.6, 1.7], \"Climate change scenario switch for water yield\": 2}'",
+    ),
+    start_year: Optional[int] = Query(
+        None, ge=1900, description="Start year for time window"
+    ),
+    end_year: Optional[int] = Query(
+        None, ge=1900, description="End year for time window"
+    ),
+    aggregate: bool = Query(
+        True,
+        description="If True, return aggregated statistics (mean, CI); if False, return all scenario data separately",
+    ),
+) -> Dict[str, Any]:
+    """Get time series for multiple scenarios matching flexible parameter filters.
+
+    This endpoint supports the 'Any' logic for parameters - you can specify:
+    - Single value: exact match (e.g., {"Fertility Variation": 1.6})
+    - List of values: match any (e.g., {"Climate scenario": [1, 2, 3]})
+    - Omit parameter: no constraint on that parameter
+
+    Args:
+        variable: Variable name to retrieve.
+        filters: JSON string mapping parameter names to values or lists.
+        start_year: Optional start year to filter time series.
+        end_year: Optional end year to filter time series.
+        aggregate: If True, return mean/CI/min/max across scenarios; if False, return raw data for each scenario.
+
+    Returns:
+        If aggregate=True:
+            {
+                "variable": str,
+                "n_scenarios": int,
+                "filter_summary": {...},
+                "series": {
+                    "time": [...],
+                    "mean": [...],
+                    "std": [...],
+                    "ci_lower": [...],
+                    "ci_upper": [...],
+                    "min": [...],
+                    "max": [...]
+                }
+            }
+        If aggregate=False:
+            {
+                "variable": str,
+                "n_scenarios": int,
+                "scenarios": [
+                    {"scenario_name": "sc_0", "parameters": {...}, "series": {"time": [...], "value": [...]}},
+                    ...
+                ]
+            }
+    """
+    try:
+        query = _get_query_instance()
+
+        # Parse filters from JSON string
+        try:
+            filter_dict = json.loads(filters)
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid JSON in filters parameter: {str(e)}",
+            )
+
+        # Build time range
+        time_range = None
+        if start_year is not None and end_year is not None:
+            time_range = (start_year, end_year)
+        elif start_year is not None:
+            time_range = (start_year, 2100)  # Default upper bound
+        elif end_year is not None:
+            time_range = (2020, end_year)  # Default lower bound
+
+        # Query data using ScenarioQuery
+        data = query.get_series(
+            variables=variable,
+            filters=filter_dict,
+            time_range=time_range,
+            include_params=True,
+        )
+
+        if data.height == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No scenarios found matching filters: {filter_dict}",
+            )
+
+        n_scenarios = data["scenario_name"].n_unique()
+
+        # Get parameter columns for metadata
+        param_cols = [
+            c
+            for c in data.columns
+            if c not in ["scenario_name", "step", "time", "value", "variable"]
+        ]
+
+        if aggregate:
+            # Aggregate across multiple scenarios
+            stats = (
+                data.group_by(["step", "time"])
+                .agg(
+                    [
+                        pl.col("value").mean().alias("mean"),
+                        pl.col("value").std().alias("std"),
+                        pl.col("value").min().alias("min"),
+                        pl.col("value").max().alias("max"),
+                        pl.col("value").quantile(0.05).alias("p05"),
+                        pl.col("value").quantile(0.95).alias("p95"),
+                        pl.col("scenario_name").n_unique().alias("n_scenarios"),
+                    ]
+                )
+                .with_columns(
+                    [
+                        # Calculate standard error for 95% CI of the mean
+                        # Handle null std and ensure n_scenarios > 0
+                        (
+                            pl.when(pl.col("n_scenarios") > 1)
+                            .then(
+                                pl.col("std").fill_null(0)
+                                / pl.col("n_scenarios").cast(pl.Float64).sqrt()
+                            )
+                            .otherwise(pl.col("std").fill_null(0))
+                        ).alias("se"),
+                    ]
+                )
+                .with_columns(
+                    [
+                        (pl.col("mean") - 1.96 * pl.col("se")).alias("ci_lower"),
+                        (pl.col("mean") + 1.96 * pl.col("se")).alias("ci_upper"),
+                    ]
+                )
+                .sort("step")
+            )
+
+            # Build filter summary showing what values were actually matched
+            filter_summary = {}
+            for param in param_cols:
+                unique_vals = data[param].unique().sort().to_list()
+                filter_summary[param] = {
+                    "requested": filter_dict.get(param, "any"),
+                    "matched": (
+                        unique_vals
+                        if len(unique_vals) <= 10
+                        else f"{len(unique_vals)} values"
+                    ),
+                }
+
+            return {
+                "variable": variable,
+                "n_scenarios": int(n_scenarios),
+                "filter_summary": filter_summary,
+                "series": {
+                    "time": stats["time"].to_list(),
+                    "mean": stats["mean"].to_list(),
+                    "std": stats["std"].to_list(),
+                    "ci_lower": stats["ci_lower"].to_list(),
+                    "ci_upper": stats["ci_upper"].to_list(),
+                    "min": stats["min"].to_list(),
+                    "max": stats["max"].to_list(),
+                    "p05": stats["p05"].to_list(),
+                    "p95": stats["p95"].to_list(),
+                },
+            }
+        else:
+            # Return all scenarios separately
+            scenarios = []
+            for scenario_name in data["scenario_name"].unique().to_list():
+                scenario_data = data.filter(
+                    pl.col("scenario_name") == scenario_name
+                ).sort("step")
+
+                # Extract parameter values for this scenario
+                params = {}
+                if scenario_data.height > 0:
+                    for param in param_cols:
+                        params[param] = scenario_data[param][0]
+
+                scenarios.append(
+                    {
+                        "scenario_name": scenario_name,
+                        "parameters": params,
+                        "series": {
+                            "time": scenario_data["time"].to_list(),
+                            "value": scenario_data["value"].to_list(),
+                        },
+                    }
+                )
+
+            return {
+                "variable": variable,
+                "n_scenarios": len(scenarios),
+                "scenarios": scenarios,
+            }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error querying multi-scenario data: {str(e)}"
+        )
 
 
 @app.get("/series/statistics")
@@ -421,10 +781,18 @@ def get_series_statistics(
 
 @app.get("/reports/{filename}")
 def get_report_file(filename: str):
-    """Serve report files (JSON, images, etc.) from the reports directory."""
-    file_path = Path("reports") / filename
+    """Serve report files (JSON, images, etc.) from the reports directory.
 
-    if not file_path.exists():
+    Security: Validates path to prevent directory traversal attacks.
+    """
+    base_dir = Path("reports").resolve()
+    file_path = (base_dir / filename).resolve()
+
+    # Enforce containment: prevent path traversal (e.g., ../../etc/passwd)
+    if not str(file_path).startswith(str(base_dir) + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
     # Set appropriate media type based on file extension
@@ -444,7 +812,7 @@ def get_page5_data(
     """Get water demand analysis data for Page 5 frontend.
 
     This endpoint provides pre-computed water demand composition and time series data
-    based on water-saving irrigation efficiency ratio and fire generation share parameters.
+    based on water saving irrigation efficiency ratio and fire generation share parameters.
     """
     try:
         # Import the Page5 analysis functions
@@ -453,10 +821,8 @@ def get_page5_data(
 
         sys.path.insert(0, str(Path(__file__).parent.parent))
 
-        from scripts.query_scenarios import ScenarioQuery
-
         # Initialize query engine
-        query = ScenarioQuery(DATA_PARQUET)
+        query = _get_query_instance()
 
         # Define water demand categories
         water_categories = [
@@ -476,7 +842,7 @@ def get_page5_data(
 
         # Build filters
         filters: Dict[str, Union[float, int, str, List]] = {
-            "water-saving irrigation efficiency ratio": water_saving_ratio,
+            "water saving irrigation efficiency ratio": water_saving_ratio,
             "fire generation share province target": energy_generation,
             "Fertility Variation": 1.7,
             "Ecological water flow variable": 0.25,
@@ -530,8 +896,22 @@ def get_page5_data(
             )
             .with_columns(
                 [
-                    (pl.col("mean") - 1.96 * pl.col("std")).alias("ci_lower"),
-                    (pl.col("mean") + 1.96 * pl.col("std")).alias("ci_upper"),
+                    # Calculate standard error for 95% CI of the mean
+                    # Handle null std and ensure n_scenarios > 0
+                    (
+                        pl.when(pl.col("n_scenarios") > 1)
+                        .then(
+                            pl.col("std").fill_null(0)
+                            / pl.col("n_scenarios").cast(pl.Float64).sqrt()
+                        )
+                        .otherwise(pl.col("std").fill_null(0))
+                    ).alias("se"),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col("mean") - 1.96 * pl.col("se")).alias("ci_lower"),
+                    (pl.col("mean") + 1.96 * pl.col("se")).alias("ci_upper"),
                 ]
             )
             .sort("step")
@@ -629,7 +1009,7 @@ def get_climate_data():
 
         # Process precipitation data
         pe_processed = {}
-        for scenario in ["ssp126_corrected", "ssp245_corrected", "ssp585_corrected"]:
+        for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in pe_df["Scenario"].values:
                 scenario_data = pe_df[pe_df["Scenario"] == scenario]
                 # Filter out invalid values (NaN, inf, -inf)
@@ -646,11 +1026,14 @@ def get_climate_data():
                     "values": valid_data["Value"].tolist(),
                 }
 
-        # Process temperature data
+        # Process temperature data (use only average temperature: taxavg)
         tas_processed = {}
-        for scenario in ["ssp126_corrected", "ssp245_corrected", "ssp585_corrected"]:
+        for scenario in ["ssp126", "ssp245", "ssp585"]:
             if scenario in tas_df["Scenario"].values:
-                scenario_data = tas_df[tas_df["Scenario"] == scenario]
+                scenario_data = tas_df[
+                    (tas_df["Scenario"] == scenario)
+                    & (tas_df["CropType"] == "taxavg")  # Only use average temperature
+                ]
                 # Filter out invalid values (NaN, inf, -inf)
                 valid_data = scenario_data.dropna()
                 valid_data = valid_data[
@@ -704,4 +1087,143 @@ async def get_yellow_river_basin():
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error loading Yellow River Basin data: {str(e)}"
+        )
+
+
+@app.get("/analysis/sensitivity")
+def analyze_sensitivity(
+    vary_param: str = Query(
+        ..., description="Parameter name to vary (e.g., 'Fertility Variation')"
+    ),
+    fixed_params: Optional[str] = Query(
+        None,
+        description="JSON string of fixed parameters, e.g. '{\"Climate change scenario switch for water yield\": 2}'",
+    ),
+    variables: Optional[str] = Query(
+        None,
+        description="JSON array of variables to test. If None, tests all variables.",
+    ),
+    start_year: Optional[int] = Query(
+        None, ge=1900, description="Start year for analysis"
+    ),
+    end_year: Optional[int] = Query(None, ge=1900, description="End year for analysis"),
+    metric: str = Query(
+        "cv",
+        pattern="^(cv|range|range_pct|std|iqr)$",
+        description="Sensitivity metric: cv, range, range_pct, std, or iqr",
+    ),
+    top_n: Optional[int] = Query(None, ge=1, description="Return only top N results"),
+) -> Dict[str, Any]:
+    """Test sensitivity of variables to parameter changes.
+
+    Analyzes how changing one parameter affects different variables,
+    while optionally fixing other parameters. Returns variables ranked
+    by their sensitivity to the varying parameter.
+
+    Args:
+        vary_param: Parameter to vary.
+        fixed_params: Optional JSON string of fixed parameters.
+        variables: Optional JSON array of variables to test.
+        start_year: Optional start year.
+        end_year: Optional end year.
+        metric: Sensitivity metric (cv, range, range_pct, std, iqr).
+        top_n: Return only top N most sensitive variables.
+
+    Returns:
+        {
+            "vary_param": str,
+            "vary_values": [...],
+            "fixed_params": {...},
+            "metric": str,
+            "results": [
+                {
+                    "variable": str,
+                    "sensitivity": float,
+                    "mean_value": float,
+                    "std_value": float,
+                    "min_value": float,
+                    "max_value": float,
+                    "range_value": float,
+                    "cv": float,
+                    "n_scenarios": int
+                },
+                ...
+            ]
+        }
+
+    Example:
+        GET /analysis/sensitivity?vary_param=Fertility%20Variation&\
+fixed_params={"Climate%20change%20scenario%20switch%20for%20water%20yield":2}&\
+metric=cv&top_n=10
+    """
+    try:
+        from scripts.analysis_helpers import sensitivity_test
+
+        query_engine = _get_query_instance()
+
+        # Parse fixed parameters
+        fixed_params_dict = None
+        if fixed_params:
+            try:
+                fixed_params_dict = json.loads(fixed_params)
+            except json.JSONDecodeError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid JSON in fixed_params: {str(e)}",
+                )
+
+        # Parse variables list
+        variables_list = None
+        if variables:
+            try:
+                variables_list = json.loads(variables)
+            except json.JSONDecodeError as e:
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid JSON in variables: {str(e)}"
+                )
+
+        # Build time range
+        time_range = None
+        if start_year is not None and end_year is not None:
+            time_range = (start_year, end_year)
+        elif start_year is not None:
+            time_range = (start_year, 2100)
+        elif end_year is not None:
+            time_range = (2020, end_year)
+
+        # Run sensitivity test
+        results_df = sensitivity_test(
+            query_engine,
+            vary_param=vary_param,
+            fixed_params=fixed_params_dict,
+            variables=variables_list,
+            time_range=time_range,
+            metric=metric,
+        )
+
+        # Limit to top N if requested
+        if top_n is not None:
+            results_df = results_df.head(top_n)
+
+        # Get vary parameter values
+        vary_values = query_engine.scenarios[vary_param].unique().sort().to_list()
+
+        return {
+            "vary_param": vary_param,
+            "vary_values": vary_values,
+            "fixed_params": fixed_params_dict or {},
+            "metric": metric,
+            "time_range": {
+                "start": start_year or 2020,
+                "end": end_year or 2100,
+            },
+            "n_variables": results_df.height,
+            "results": results_df.to_dicts(),
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error in sensitivity analysis: {str(e)}"
         )

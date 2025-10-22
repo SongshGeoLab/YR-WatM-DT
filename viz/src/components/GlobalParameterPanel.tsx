@@ -1,3 +1,4 @@
+import React from 'react';
 import { X, RefreshCw, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useScenario } from '../contexts/ScenarioContext';
@@ -161,7 +162,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
               Climate Change Scenario
             </h3>
             <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3].map(scenario => (
+              {[1, 2].map(scenario => (
                 <button
                   key={scenario}
                   onClick={() => updateParameter('climateScenario', scenario)}
@@ -171,7 +172,7 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
                       : 'border-border hover:bg-muted'
                   }`}
                 >
-                  RCP{scenario === 1 ? '2.6' : scenario === 2 ? '4.5' : '8.5'}
+                  RCP{scenario === 1 ? '2.6' : '4.5'}
                 </button>
               ))}
               <button
@@ -197,29 +198,16 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
             </h3>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Fertility Rate</label>
-                <button
-                  onClick={() => updateParameter('fertility', parameters.fertility === null ? 1.7 : null)}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    parameters.fertility === null
-                      ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300'
-                      : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
-                  }`}
-                >
-                  {parameters.fertility === null ? 'Set to 1.7' : 'Clear'}
-                </button>
-              </div>
               <ParameterSlider
-                label=""
+                label="Fertility Rate"
                 min={1.6}
                 max={1.8}
                 step={0.05}
-                defaultValue={parameters.fertility || 1.7}
+                defaultValue={parameters.fertility}
                 unit=""
-                description={parameters.fertility === null ? "Any value (Multiple scenarios)" : "Total fertility rate (children per woman)"}
+                description="Total fertility rate (children per woman)"
                 onChange={(value) => updateParameter('fertility', value)}
-                disabled={parameters.fertility === null}
+                allowAny={true}
               />
             </div>
 
@@ -259,104 +247,65 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
 
             {/* Right Column */}
             <div className="space-y-2">
-              {/* Ecological Water (Page 4) */}
+              {/* Ecological Water (Page 6) */}
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
-                4
+                6
               </span>
               Ecological Water
             </h3>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Ecological Flow Ratio</label>
-                <button
-                  onClick={() => updateParameter('ecologicalFlow', parameters.ecologicalFlow === null ? 0.25 : null)}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    parameters.ecologicalFlow === null
-                      ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300'
-                      : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
-                  }`}
-                >
-                  {parameters.ecologicalFlow === null ? 'Set to 0.25' : 'Clear'}
-                </button>
-              </div>
               <ParameterSlider
-                label=""
+                label="Ecological Flow Ratio"
                 min={0.2}
                 max={0.3}
                 step={0.05}
-                defaultValue={parameters.ecologicalFlow || 0.25}
+                defaultValue={parameters.ecologicalFlow}
                 unit=""
-                description={parameters.ecologicalFlow === null ? "Any value (Multiple scenarios)" : "Proportion of ecological flow for sediment flushing"}
+                description="Proportion of ecological flow for sediment flushing"
                 onChange={(value) => updateParameter('ecologicalFlow', value)}
-                disabled={parameters.ecologicalFlow === null}
+                allowAny={true}
               />
             </div>
           </div>
           </div>
 
-          {/* Agriculture (Page 5) */}
+          {/* Agriculture (Page 4/5 group moved: Agriculture now Page 4, Composition Page 5) */}
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs">
-                5
+                4
               </span>
               Agriculture & Industry
             </h3>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Irrigation Efficiency</label>
-                <button
-                  onClick={() => updateParameter('irrigationEfficiency', parameters.irrigationEfficiency === null ? 0.85 : null)}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    parameters.irrigationEfficiency === null
-                      ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300'
-                      : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
-                  }`}
-                >
-                  {parameters.irrigationEfficiency === null ? 'Set to 0.85' : 'Clear'}
-                </button>
-              </div>
               <ParameterSlider
-                label=""
+                label="Irrigation Efficiency"
                 min={0.8}
                 max={1.0}
                 step={0.05}
-                defaultValue={parameters.irrigationEfficiency || 0.85}
+                defaultValue={parameters.irrigationEfficiency}
                 unit=""
-                description={parameters.irrigationEfficiency === null ? "Any value (Multiple scenarios)" : "Water-saving irrigation efficiency ratio"}
+                description="water saving irrigation efficiency ratio"
                 onChange={(value) => updateParameter('irrigationEfficiency', value)}
-                disabled={parameters.irrigationEfficiency === null}
+                allowAny={true}
               />
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Thermal Power Generation Share</label>
-                <button
-                  onClick={() => updateParameter('fireGenerationShare', parameters.fireGenerationShare === null ? 0.15 : null)}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    parameters.fireGenerationShare === null
-                      ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300'
-                      : 'bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground'
-                  }`}
-                >
-                  {parameters.fireGenerationShare === null ? 'Set to 0.15' : 'Clear'}
-                </button>
-              </div>
               <ParameterSlider
-                label=""
+                label="Thermal Power Generation Share"
                 min={0.1}
                 max={0.4}
                 step={0.05}
-                defaultValue={parameters.fireGenerationShare || 0.15}
+                defaultValue={parameters.fireGenerationShare}
                 unit=""
-                description={parameters.fireGenerationShare === null ? "Any value (Multiple scenarios)" : "Share of thermal (fossil fuel) power in total electricity generation"}
+                description="Share of thermal (fossil fuel) power in total electricity generation"
                 onChange={(value) => updateParameter('fireGenerationShare', value)}
-                disabled={parameters.fireGenerationShare === null}
+                allowAny={true}
               />
             </div>
             </div>
