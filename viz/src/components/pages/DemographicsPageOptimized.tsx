@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { ParameterSlider } from '../ui/parameter-slider';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
-import { Users, Droplet } from 'lucide-react';
+import { Users, Droplet, Factory } from 'lucide-react';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import ExplanationPopover from '../ui/ExplanationPopover';
 
@@ -345,36 +345,31 @@ export default function DemographicsPageOptimized() {
     };
   }, [populationData, domesticData, oaData, scenarioResult]);
 
-  // Find peak year for domestic water demand
-  const peakYearInfo = useMemo(() => {
-    if (!domesticData?.series) return null;
-
-    const series = domesticData.series;
+  // Peak helpers
+  const computePeakInfo = (seriesContainer: any) => {
+    if (!seriesContainer?.series) return null;
+    const series = seriesContainer.series;
     const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
     const time = series.time;
-
-    // Guard: verify arrays exist, have data, and are aligned
-    if (!values || !time || values.length === 0 || time.length === 0 || values.length !== time.length) {
-      return null;
-    }
-
-    // Find peak value and corresponding year
+    if (!values || !time || values.length === 0 || time.length === 0 || values.length !== time.length) return null;
     let maxValue = values[0];
     let peakYear = time[0];
-
     for (let i = 1; i < values.length; i++) {
       if (values[i] > maxValue) {
         maxValue = values[i];
         peakYear = time[i];
       }
     }
-
     return {
       peakYear,
       peakValue: maxValue,
       method: scenarioResult?.isSingleScenario ? 'single scenario' : 'multi-scenario mean'
     };
-  }, [domesticData, scenarioResult]);
+  };
+
+  const populationPeakInfo = useMemo(() => computePeakInfo(populationData), [populationData, scenarioResult]);
+  const domesticPeakInfo = useMemo(() => computePeakInfo(domesticData), [domesticData, scenarioResult]);
+  const oaPeakInfo = useMemo(() => computePeakInfo(oaData), [oaData, scenarioResult]);
 
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-hidden">
@@ -599,43 +594,83 @@ export default function DemographicsPageOptimized() {
             </div>
           </div>
 
-          {/* Peak Year Information */}
-          {peakYearInfo && (
-            <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                  <Droplet className="w-4 h-4 text-white" />
+          {/* Peak Year Information - trio */}
+          {(populationPeakInfo || domesticPeakInfo || oaPeakInfo) && (
+            <div className="grid grid-cols-3 gap-3">
+              {/* Population peak */}
+              {populationPeakInfo && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-200">Population Peak</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700 dark:text-blue-300">Peak Year:</span>
+                      <span className="font-bold text-blue-900 dark:text-blue-100">{Math.round(populationPeakInfo.peakYear)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700 dark:text-blue-300">Peak Value:</span>
+                      <span className="font-bold text-blue-900 dark:text-blue-100">{populationPeakInfo.peakValue.toFixed(1)}M</span>
+                    </div>
+                    <div className="pt-2 border-t border-blue-200 dark:border-blue-700">
+                      <p className="text-xs text-blue-600 dark:text-blue-400">Based on {populationPeakInfo.method}</p>
+                    </div>
+                  </div>
                 </div>
-                <h4 className="font-semibold text-green-900 dark:text-green-200">
-                  Peak Demand Analysis
-                </h4>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700 dark:text-green-300">
-                    Peak Year:
-                  </span>
-                  <span className="font-bold text-green-900 dark:text-green-100">
-                    {Math.round(peakYearInfo.peakYear)}
-                  </span>
+              {/* Domestic water peak */}
+              {domesticPeakInfo && (
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                      <Droplet className="w-4 h-4 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-green-900 dark:text-green-200">Domestic Water Peak</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700 dark:text-green-300">Peak Year:</span>
+                      <span className="font-bold text-green-900 dark:text-green-100">{Math.round(domesticPeakInfo.peakYear)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700 dark:text-green-300">Peak Value:</span>
+                      <span className="font-bold text-green-900 dark:text-green-100">{domesticPeakInfo.peakValue.toFixed(2)}B m³</span>
+                    </div>
+                    <div className="pt-2 border-t border-green-200 dark:border-green-700">
+                      <p className="text-xs text-green-600 dark:text-green-400">Based on {domesticPeakInfo.method}</p>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700 dark:text-green-300">
-                    Peak Value:
-                  </span>
-                  <span className="font-bold text-green-900 dark:text-green-100">
-                    {peakYearInfo.peakValue.toFixed(2)}B m³
-                  </span>
+              {/* OA water peak */}
+              {oaPeakInfo && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center">
+                      <Factory className="w-4 h-4 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-200">Other Activities Peak</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-amber-700 dark:text-amber-300">Peak Year:</span>
+                      <span className="font-bold text-amber-900 dark:text-amber-100">{Math.round(oaPeakInfo.peakYear)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-amber-700 dark:text-amber-300">Peak Value:</span>
+                      <span className="font-bold text-amber-900 dark:text-amber-100">{oaPeakInfo.peakValue.toFixed(2)}B m³</span>
+                    </div>
+                    <div className="pt-2 border-t border-amber-200 dark:border-amber-700">
+                      <p className="text-xs text-amber-600 dark:text-amber-400">Based on {oaPeakInfo.method}</p>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="pt-2 border-t border-green-200 dark:border-green-700">
-                  <p className="text-xs text-green-600 dark:text-green-400">
-                    Based on {peakYearInfo.method}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>

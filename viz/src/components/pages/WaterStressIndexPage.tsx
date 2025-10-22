@@ -314,7 +314,7 @@ export default function WaterStressIndexPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Water Composition Analysis</h1>
             <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-              Page 6
+              Page 5
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">

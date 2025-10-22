@@ -21,9 +21,9 @@ For end users, please refer to the user guides above. The technical documentatio
 - ✅ **Page 1: Introduction** - Yellow River Basin overview with river analysis bubble charts
 - ✅ **Page 2: Climate Change Impact Analysis** - Complete real data integration with SNWTP toggle
 - ✅ **Page 3: Demographics & Domestic Water** - Multi-scenario analysis with peak year detection
-- ✅ **Page 4: Ecological Water Flow** - Threshold comparison with SNWTP impact analysis
-- ✅ **Page 5: Water Demand Analysis** - Irrigation and production water demand with parameter sliders
-- ✅ **Page 6: Water Composition Analysis** - Water demand composition trends and total demand analysis
+- ✅ **Page 4: Water Demand Analysis** - Irrigation and production water demand with parameter sliders
+- ✅ **Page 5: Water Composition Analysis** - Water demand composition trends and total demand analysis
+- ✅ **Page 6: Ecological Water Flow** - Threshold comparison with SNWTP impact analysis
 - ✅ **Page 7: Water Stress Index Analysis** - Global scenario selection and water stress monitoring
 
 ### Key Technical Achievements
@@ -270,12 +270,12 @@ viz/
 │   │   │   ├── PlotlyChart.tsx              # Reusable Plotly wrapper (with dark mode)
 │   │   │   └── BasicChart.tsx               # Fallback chart component
 │   │   ├── pages/
-│   │   │   ├── EcologicalWaterPageSlider.tsx # ✅ Page 4 (fully integrated)
+│   │   │   ├── EcologicalWaterPageSlider.tsx # ✅ Page 6 (fully integrated)
 │   │   │   ├── WaterAvailabilityPage.tsx    # ✅ Page 2 (fully integrated) **NEW**
 │   │   │   ├── StudyAreaPage.tsx            # Page 1 (static design)
 │   │   │   ├── DemographicsPage.tsx         # Page 3 (static design)
-│   │   │   ├── AgriculturePage.tsx          # Page 5 (static design)
-│   │   │   ├── WaterStressPage.tsx          # Page 6 (static design)
+│   │   │   ├── AgriculturePage.tsx          # Page 4 (static design)
+│   │   │   ├── WaterStressPage.tsx          # Page 5 (static design)
 │   │   │   └── WaterQualityPage.tsx         # Page 7 (static design)
 │   │   ├── DataComparisonPanel.tsx          # **NEW**: Climate impact comparison component
 │   │   ├── GlobalParameterPanel.tsx         # Global scenario parameter controls
@@ -312,7 +312,7 @@ Reusable Plotly component with dark mode support:
 
 #### ✅ Fully Integrated Pages
 
-##### **Page 4: Ecological Water** (`EcologicalWaterPageSlider.tsx`)
+##### **Page 6: Ecological Water** (`EcologicalWaterPageSlider.tsx`)
 Complete backend integration with slider controls:
 - Real-time parameter adjustment (ecological flow: 0.2, 0.25, 0.3)
 - Multi-variable support (surface water, discharge, sediment)
@@ -375,7 +375,7 @@ Climate change scenario integration with advanced features:
 - ✅ **Comparative Analysis**: `useClimateComparison` hook for future projections
 - ✅ **Layout Optimization**: Flexbox-based auto-sizing panels
 
-### Page 4: Ecological Water
+### Page 6: Ecological Water
 **Real-time parameter control with statistical analysis**
 
 #### What We Built
@@ -394,7 +394,7 @@ Climate change scenario integration with advanced features:
 
 ### Integration Patterns
 These implementations demonstrate reusable patterns:
-1. **Global Parameters** (Page 4): Parameter changes affect all pages
+1. **Global Parameters** (Page 6): Parameter changes affect all pages
 2. **Local Parameters** (Page 2 SNWTP): Page-specific controls for targeted analysis
 3. **Multi-Scenario Analysis** (Page 2): Statistical aggregation across matching scenarios
 4. **Climate Data Integration** (Page 2): External dataset integration for comparative analysis
@@ -426,7 +426,7 @@ npm run dev
 ```
 
 ### 4. Explore
-- Navigate to **Page 4** (Ecological Water) for full backend integration demo
+- Navigate to **Page 6** (Ecological Water) for full backend integration demo
 - Features: Slider controls, variable switching, dark mode, real-time updates
 - Check browser Console for API logs and Network tab for `/resolve_scenario` calls
 

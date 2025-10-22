@@ -279,7 +279,7 @@ export default function WaterDemandPageWithRealData() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">Water Demand Analysis</h1>
             <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-sm font-medium">
-              Page 5
+              Page 4
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-1">

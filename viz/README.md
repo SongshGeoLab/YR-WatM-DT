@@ -51,7 +51,7 @@ npm run preview
    - 交互式 Leaflet 地图
    - 流域边界和主要河流显示
 
-#### **Page 5: Water Demand Analysis - 用水需求分析**
+#### **Page 4: Water Demand Analysis - 用水需求分析**
 灌溉用水和生产用水需求分析，支持参数调节。
 
 ##### 核心功能
@@ -69,7 +69,7 @@ npm run preview
    - 2020年vs 2100年数据对比
    - 变化趋势和百分比显示
 
-#### **Page 6: Water Composition Analysis - 用水组成分析**
+#### **Page 5: Water Composition Analysis - 用水组成分析**
 用水组成趋势分析和总用水需求分析。
 
 ##### 核心功能
@@ -473,10 +473,10 @@ const chartData = useMemo(() => {
 ### 页面集成状态
 - ✅ **Page 2: Water Availability** - 完全集成，真实数据 + SNWTP 开关 + 气候对比面板
 - ✅ **Page 3: Demographics** - 完全集成，多情景分析 + 峰值年份检测 + 不确定性可视化
-- ✅ **Page 4: Ecological Water** - 完全集成，阈值对比 + SNWTP 影响分析 + 生态流量计算
+- ✅ **Page 4: Water Demand** - 完全集成，参数滑块 + 多情景不确定性
+- ✅ **Page 5: Water Composition** - 完全集成，用水组成 + 总用水趋势
+- ✅ **Page 6: Ecological Water** - 完全集成，阈值对比 + SNWTP 影响分析 + 生态流量计算
 - ⏳ Page 1: Study Area (研究区域)
-- ⏳ Page 5: Agriculture (农业用水)
-- ⏳ Page 6: Water Stress (水资源压力)
 - ⏳ Page 7: Water Quality (水质)
 
 ### 计划功能

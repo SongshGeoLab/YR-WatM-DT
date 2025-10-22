@@ -247,11 +247,11 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
 
             {/* Right Column */}
             <div className="space-y-2">
-              {/* Ecological Water (Page 4) */}
+              {/* Ecological Water (Page 6) */}
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
-                4
+                6
               </span>
               Ecological Water
             </h3>
@@ -272,11 +272,11 @@ export default function GlobalParameterPanel({ onClose }: { onClose: () => void 
           </div>
           </div>
 
-          {/* Agriculture (Page 5) */}
+          {/* Agriculture (Page 4/5 group moved: Agriculture now Page 4, Composition Page 5) */}
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs">
-                5
+                4
               </span>
               Agriculture & Industry
             </h3>

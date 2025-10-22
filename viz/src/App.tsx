@@ -58,9 +58,9 @@ function AppInner() {
     { name: 'Introduction', icon: Map, color: 'blue' },
     { name: 'Climate Change', icon: CloudRain, color: 'cyan' },
     { name: 'Demographics', icon: Users, color: 'purple' },
-    { name: 'Ecological Water', icon: TreePine, color: 'green' },
     { name: 'Water Demand', icon: Sprout, color: 'orange' },
     { name: 'Water Composition', icon: Gauge, color: 'red' },
+    { name: 'Ecological Water', icon: TreePine, color: 'green' },
     { name: 'Water Stress Index', icon: Activity, color: 'indigo' }
   ];
 
@@ -69,10 +69,10 @@ function AppInner() {
       case 0: return <StudyAreaPage />;
       case 1: return <WaterAvailabilityPage />;
       case 2: return <DemographicsPageOptimized />;
-      case 3: return <EcologicalWaterPageSlider />;
-      case 4: return <WaterDemandPageWithRealData />;
-      case 5: return <WaterStressIndexPage />;
-      case 6: return <WaterQualityPage />;
+      case 3: return <WaterDemandPageWithRealData />; // Page 4
+      case 4: return <WaterStressIndexPage />; // Page 5 (Water Composition Analysis component)
+      case 5: return <EcologicalWaterPageSlider />; // Page 6
+      case 6: return <WaterQualityPage />; // Page 7
       default: return <StudyAreaPage />;
     }
   };
