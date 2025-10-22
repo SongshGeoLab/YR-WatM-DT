@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pickle
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -91,13 +91,15 @@ class ScenarioQuery:
                 self.variables_map_path.read_text(encoding="utf-8")
             )
 
-        # Setup cache
+        # Setup cache (skip directory creation in Docker environment)
         self.cache_dir = cache_dir or (self.data_dir / "cache")
-        self.cache_dir.mkdir(exist_ok=True)
+        # Skip directory creation in Docker environment (read-only filesystem)
+        # self.cache_dir.mkdir(exist_ok=True)
 
         # In-memory cache for frequently accessed queries
         self.query_cache: Dict[str, pl.DataFrame] = {}
         self.cache_max_size = 100  # Maximum number of cached queries
+        self._cache_lock = threading.Lock()  # Thread safety for cache operations
 
         # Pre-computed default scenario cache
         self.default_scenario_cache: Dict[str, pl.DataFrame] = {}
@@ -324,9 +326,10 @@ class ScenarioQuery:
         cache_key = self._generate_cache_key(variables, filters, time_range)
 
         # Check in-memory cache first
-        if cache_key in self.query_cache:
-            print(f"🎯 Cache hit for query: {variables}")
-            return self.query_cache[cache_key]
+        with self._cache_lock:
+            if cache_key in self.query_cache:
+                print(f"🎯 Cache hit for query: {variables}")
+                return self.query_cache[cache_key]
 
         # Check default scenario cache for single variable queries
         if (
@@ -358,40 +361,42 @@ class ScenarioQuery:
         return result
 
     def _cache_result(self, cache_key: str, result: pl.DataFrame):
-        """Cache a query result.
+        """Cache a query result with thread safety.
 
         Args:
             cache_key: Unique key for the query
             result: DataFrame result to cache
         """
-        # Manage cache size
-        if len(self.query_cache) >= self.cache_max_size:
-            # Remove oldest entry (simple FIFO)
-            oldest_key = next(iter(self.query_cache))
-            del self.query_cache[oldest_key]
+        with self._cache_lock:
+            # Manage cache size
+            if len(self.query_cache) >= self.cache_max_size:
+                # Remove oldest entry (simple FIFO)
+                oldest_key = next(iter(self.query_cache))
+                del self.query_cache[oldest_key]
 
-        # Cache the result
-        self.query_cache[cache_key] = result.clone()
+            # Cache the result
+            self.query_cache[cache_key] = result.clone()
 
-        # Also save to disk for persistence
-        cache_file = self.cache_dir / f"{cache_key}.pkl"
-        try:
-            with open(cache_file, "wb") as f:
-                pickle.dump(result, f)
-        except Exception as e:
-            print(f"⚠️  Failed to save cache to disk: {e}")
+        # Skip disk cache in Docker environment (read-only filesystem)
+        # cache_file = self.cache_dir / f"{cache_key}.pkl"
+        # try:
+        #     with open(cache_file, "wb") as f:
+        #         pickle.dump(result, f)
+        # except Exception as e:
+        #     print(f"⚠️  Failed to save cache to disk: {e}")
 
     def clear_cache(self):
-        """Clear all cached results."""
-        self.query_cache.clear()
-        self.default_scenario_cache.clear()
+        """Clear all cached results with thread safety."""
+        with self._cache_lock:
+            self.query_cache.clear()
+            self.default_scenario_cache.clear()
 
-        # Clear disk cache
-        for cache_file in self.cache_dir.glob("*.pkl"):
-            try:
-                cache_file.unlink()
-            except Exception as e:
-                print(f"⚠️  Failed to remove cache file {cache_file}: {e}")
+        # Skip disk cache clearing in Docker environment (read-only filesystem)
+        # for cache_file in self.cache_dir.glob("*.pkl"):
+        #     try:
+        #         cache_file.unlink()
+        #     except Exception as e:
+        #         print(f"⚠️  Failed to remove cache file {cache_file}: {e}")
 
         print("🧹 Cache cleared")
 
@@ -401,7 +406,9 @@ class ScenarioQuery:
         Returns:
             Dictionary with cache statistics
         """
-        disk_cache_files = len(list(self.cache_dir.glob("*.pkl")))
+        # Skip disk cache stats in Docker environment (read-only filesystem)
+        # disk_cache_files = len(list(self.cache_dir.glob("*.pkl")))
+        disk_cache_files = 0
         return {
             "memory_cache_size": len(self.query_cache),
             "default_cache_size": len(self.default_scenario_cache),

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import * as api from '../services/api';
 
 /**
@@ -354,7 +354,8 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   // Auto-resolve scenarios when parameters change
   useEffect(() => {
     if (availableParams) {
-      resolveScenarios();
+      const id = setTimeout(resolveScenarios, 250);
+      return () => clearTimeout(id);
     }
   }, [parameters, availableParams, resolveScenarios]);
 
@@ -480,7 +481,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const contextValue: ScenarioContextState = {
+  const contextValue: ScenarioContextState = useMemo(() => ({
     parameters,
     scenarioResult,
     availableParams,
@@ -490,7 +491,17 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     resetParameters,
     resolveScenarios,
     applyPresetScenario,
-  };
+  }), [
+    parameters,
+    scenarioResult,
+    availableParams,
+    loading,
+    error,
+    updateParameter,
+    resetParameters,
+    resolveScenarios,
+    applyPresetScenario,
+  ]);
 
   return (
     <ScenarioContext.Provider value={contextValue}>
@@ -615,7 +626,7 @@ export function useScenarioSeries(
             const demoResult = {
               series: {
                 time: Array.from({ length: 81 }, (_, i) => 2020 + i),
-                value: Array.from({ length: 81 }, (_, i) => 100 + Math.sin(i / 10) * 20 + Math.random() * 10),
+                value: Array.from({ length: 81 }, (_, i) => 100 + Math.sin(i / 10) * 20),
                 mean: Array.from({ length: 81 }, (_, i) => 100 + Math.sin(i / 10) * 20),
                 ci_lower: Array.from({ length: 81 }, (_, i) => 90 + Math.sin(i / 10) * 18),
                 ci_upper: Array.from({ length: 81 }, (_, i) => 110 + Math.sin(i / 10) * 22),

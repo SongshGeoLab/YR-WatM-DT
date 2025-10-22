@@ -200,14 +200,14 @@ function AppInner() {
                     {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                   </button>
                   <button
-                    onClick={() => window.open('https://www.nature.com/articles/s43017-025-00718-2', '_blank')}
+                    onClick={() => window.open('https://www.nature.com/articles/s43017-025-00718-2', '_blank', 'noopener,noreferrer')}
                     className="w-9 h-9 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
                   aria-label="View research paper"
                   >
                     <FileText className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => window.open('https://github.com/SongshGeoLab', '_blank')}
+                    onClick={() => window.open('https://github.com/SongshGeoLab', '_blank', 'noopener,noreferrer')}
                     className="w-9 h-9 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors flex items-center justify-center"
                   aria-label="View SongshGeoLab on GitHub"
                   >
