@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "WatM-DT"
-version = "1.2.0"
+version = "0.1.0"
 description = "Water Management Decision Theater"
 authors = ["SongshGeo <songshgeo@gmail.com>"]
 license = "MIT"
