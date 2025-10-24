@@ -92,7 +92,7 @@
         "cn": "聚焦快速可再生能源转型和节水技术，同时维持生态流量的情景。"
       },
       "parameters": {
-        "climateScenario": 1,
+        "climateScenario": 3,
         "fertility": 1.7,
         "dietPattern": 2,
         "ecologicalFlow": 0.3,
@@ -126,6 +126,31 @@
       },
       "color": "#f59e0b",
       "icon": "high_demand"
+    },
+    {
+      "id": "rcp85_high_emissions",
+      "name": {
+        "en": "RCP 8.5 High Emissions",
+        "cn": "RCP 8.5 高排放情景"
+      },
+      "description": {
+        "en": "High emissions scenario with RCP 8.5 climate pathway",
+        "cn": "RCP 8.5 气候路径的高排放情景"
+      },
+      "story": {
+        "en": "High emissions scenario representing continued high greenhouse gas emissions leading to significant climate change impacts.",
+        "cn": "高排放情景，代表持续的高温室气体排放，导致显著的气候变化影响。"
+      },
+      "parameters": {
+        "climateScenario": 3,
+        "fertility": 1.6,
+        "dietPattern": 1,
+        "ecologicalFlow": 0.3,
+        "irrigationEfficiency": 1.0,
+        "fireGenerationShare": 0.1
+      },
+      "color": "#dc2626",
+      "icon": "high_emissions"
     },
     {
       "id": "tech_innovation",

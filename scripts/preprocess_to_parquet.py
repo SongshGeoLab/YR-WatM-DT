@@ -200,13 +200,9 @@ def wide_csv_to_long_df(csv_path: Path, variable: str) -> pl.DataFrame:
     long_df = df.melt(
         id_vars=["scenario_name"], variable_name="step", value_name="value"
     )
-    
+
     # Apply data corrections based on variable name
     value_expr = pl.col("value")
-    if variable == "OA water demand province sum":
-        # OA water demand has unit issues in raw data, multiply by 100
-        value_expr = value_expr * 100
-    
     long_df = long_df.with_columns(
         pl.col("scenario_name").cast(pl.Categorical),
         pl.col("step").cast(pl.UInt32),

@@ -109,7 +109,8 @@ export default function WaterAvailabilityPage() {
   const selectedScenario = useMemo(() => {
     const scenarioMap = {
       1: 'RCP2.6',
-      2: 'RCP4.5'
+      2: 'RCP4.5',
+      3: 'RCP8.5'
     };
     return parameters.climateScenario ? scenarioMap[parameters.climateScenario as keyof typeof scenarioMap] : 'Any';
   }, [parameters.climateScenario]);
@@ -123,7 +124,8 @@ export default function WaterAvailabilityPage() {
 
     const climateScenarioMap = {
       'RCP2.6': 1,
-      'RCP4.5': 2
+      'RCP4.5': 2,
+      'RCP8.5': 3
     };
     const scenarioValue = climateScenarioMap[scenario as keyof typeof climateScenarioMap];
     if (scenarioValue) {
@@ -158,7 +160,7 @@ export default function WaterAvailabilityPage() {
       bgColor: 'bg-gray-50',
       borderColor: 'border-gray-200',
       textColor: 'text-gray-900',
-      description: 'Aggregated results from RCP2.6 and RCP4.5 scenarios'
+      description: 'Aggregated results from RCP2.6, RCP4.5, and RCP8.5 scenarios'
     },
     'RCP2.6': {
       name: 'RCP2.6',
@@ -178,6 +180,15 @@ export default function WaterAvailabilityPage() {
       textColor: 'text-amber-900',
       description: 'Traditional industries coexist with green technologies, gradual renewable energy adoption'
     },
+    'RCP8.5': {
+      name: 'RCP8.5',
+      title: 'High Emissions Scenario',
+      color: '#dc2626',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-900',
+      description: 'High emissions scenario with continued fossil fuel dependence and limited climate action'
+    },
   };
 
   // Process real climate data from API
@@ -187,12 +198,14 @@ export default function WaterAvailabilityPage() {
     // Map API scenario names to display names
     const scenarioMapping = {
       'ssp126': 'RCP2.6-SSP1',
-      'ssp245': 'RCP4.5-SSP2'
+      'ssp245': 'RCP4.5-SSP2',
+      'ssp585': 'RCP8.5-SSP5'
     };
 
     const processed = {
       rcp26: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
-      rcp45: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } }
+      rcp45: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } },
+      rcp85: { temp: { years: [] as number[], values: [] as number[] }, precip: { years: [] as number[], values: [] as number[] } }
     };
 
     // Process temperature data
@@ -200,6 +213,7 @@ export default function WaterAvailabilityPage() {
       const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
       if (displayName === 'RCP2.6-SSP1') processed.rcp26.temp = data;
       else if (displayName === 'RCP4.5-SSP2') processed.rcp45.temp = data;
+      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.temp = data;
     });
 
     // Process precipitation data
@@ -207,6 +221,7 @@ export default function WaterAvailabilityPage() {
       const displayName = scenarioMapping[scenario as keyof typeof scenarioMapping];
       if (displayName === 'RCP2.6-SSP1') processed.rcp26.precip = data;
       else if (displayName === 'RCP4.5-SSP2') processed.rcp45.precip = data;
+      else if (displayName === 'RCP8.5-SSP5') processed.rcp85.precip = data;
     });
 
     return processed;
@@ -242,6 +257,18 @@ export default function WaterAvailabilityPage() {
       });
     }
 
+    if (processedClimateData.rcp85.temp.years && processedClimateData.rcp85.temp.years.length > 0) {
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        x: processedClimateData.rcp85.temp.years,
+        y: processedClimateData.rcp85.temp.values,
+        name: 'RCP8.5-SSP5',
+        line: { color: '#dc2626', width: 3 },
+        hovertemplate: '<b>RCP8.5-SSP5</b><br>Year: %{x}<br>Temperature: %{y:.2f}°C<extra></extra>'
+      });
+    }
+
 
     return traces;
   }, [processedClimateData]);
@@ -251,22 +278,24 @@ export default function WaterAvailabilityPage() {
     if (!processedClimateData) return [];
 
     if (selectedScenario === 'Any') {
-      // Calculate average of RCP2.6 and RCP4.5 for "Any" scenario
+      // Calculate average of RCP2.6, RCP4.5, and RCP8.5 for "Any" scenario
       const rcp26Data = processedClimateData.rcp26;
       const rcp45Data = processedClimateData.rcp45;
+      const rcp85Data = processedClimateData.rcp85;
 
-      if (!rcp26Data || !rcp45Data ||
+      if (!rcp26Data || !rcp45Data || !rcp85Data ||
           !rcp26Data.temp.years || !rcp26Data.precip.years ||
-          !rcp45Data.temp.years || !rcp45Data.precip.years) return [];
+          !rcp45Data.temp.years || !rcp45Data.precip.years ||
+          !rcp85Data.temp.years || !rcp85Data.precip.years) return [];
 
       // Calculate average temperature
       const avgTempValues = rcp26Data.temp.values.map((val: number, idx: number) =>
-        (val + rcp45Data.temp.values[idx]) / 2
+        (val + rcp45Data.temp.values[idx] + rcp85Data.temp.values[idx]) / 3
       );
 
       // Calculate average precipitation
       const avgPrecipValues = rcp26Data.precip.values.map((val: number, idx: number) =>
-        (val + rcp45Data.precip.values[idx]) / 2
+        (val + rcp45Data.precip.values[idx] + rcp85Data.precip.values[idx]) / 3
       );
 
       return [
@@ -293,7 +322,12 @@ export default function WaterAvailabilityPage() {
       ];
     } else {
       // Single scenario mode
-      const scenarioKey = selectedScenario.toLowerCase().replace('.', '') as keyof typeof processedClimateData;
+      let scenarioKey: keyof typeof processedClimateData;
+      if (selectedScenario === 'RCP2.6') scenarioKey = 'rcp26';
+      else if (selectedScenario === 'RCP4.5') scenarioKey = 'rcp45';
+      else if (selectedScenario === 'RCP8.5') scenarioKey = 'rcp85';
+      else return [];
+
       const selectedData = processedClimateData[scenarioKey];
 
       if (!selectedData || !selectedData.temp.years || !selectedData.precip.years) return [];
