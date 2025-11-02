@@ -13,6 +13,7 @@ import { Map, Droplets, Mountain, Calendar, Clock } from 'lucide-react';
 export default function StudyAreaPage() {
   const [activeTab, setActiveTab] = useState<'discharge' | 'sediment'>('discharge');
   const [currentYear, setCurrentYear] = useState<number>(2020);
+  const [snwtpEnabled, setSnwtpEnabled] = useState(false);
 
   // River discharge data (from the successful RiverAnalysisPage)
   const dischargeData = useMemo(() => {
@@ -375,14 +376,41 @@ export default function StudyAreaPage() {
 
           {/* Right side - Map */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="mb-3 flex-shrink-0">
+            <div className="mb-3 flex-shrink-0 flex items-center justify-between">
               <h3 className="font-semibold text-foreground mb-2 text-lg">Interactive Basin Map</h3>
+              {/* South-North Water Transfer Project Toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">南水北调:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSnwtpEnabled(false)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
+                      !snwtpEnabled
+                        ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 font-medium'
+                        : 'bg-card border-border text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    Off
+                  </button>
+                  <button
+                    onClick={() => setSnwtpEnabled(true)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
+                      snwtpEnabled
+                        ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300 font-medium'
+                        : 'bg-card border-border text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    On
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex-1 min-h-0 bg-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
               <LeafletMap
                 id="yellow-river-basin-map"
                 height="100%"
                 className="w-full h-full rounded-lg"
+                showSNWTP={snwtpEnabled}
               />
             </div>
           </div>

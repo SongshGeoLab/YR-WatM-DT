@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getYellowRiverBasin, YellowRiverBasinData } from '../../services/api';
+import { getYellowRiverBasin, getSWNP, YellowRiverBasinData } from '../../services/api';
 
 interface LeafletMapProps {
   id: string;
   className?: string;
   height?: string;
+  showSNWTP?: boolean;
 }
 
 declare global {
@@ -13,7 +14,7 @@ declare global {
   }
 }
 
-export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapProps) {
+export function LeafletMap({ id, className = "", height = "400px", showSNWTP = false }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +105,7 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
 
         // Store layers for later reference
         map._basinLayer = null;
+        map._swntpLayer = null;
 
         // Create a layer group for overlays
         const overlayGroup = window.L.layerGroup().addTo(map);
@@ -170,6 +172,59 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
           console.error('Failed to load Yellow River Basin data:', basinError);
         }
 
+        // Load SNWTP layer immediately if showSNWTP is true on initial load
+        if (showSNWTP && map._overlayGroup) {
+          try {
+            const swntpData: YellowRiverBasinData = await getSWNP();
+
+            if (swntpData.features && swntpData.features.length > 0) {
+              // Enhanced styling to ensure visibility
+              const swntpLayer = window.L.geoJSON(swntpData, {
+                style: (feature: any) => {
+                  // Different styles for different geometry types
+                  const geomType = feature?.geometry?.type;
+                  const isLine = geomType === 'LineString' || geomType === 'MultiLineString';
+                  const isPolygon = geomType === 'Polygon' || geomType === 'MultiPolygon';
+
+                  if (isLine) {
+                    return {
+                      color: '#10b981',
+                      weight: 5,
+                      opacity: 1.0,
+                      fillOpacity: 0.0,
+                      dashArray: '10, 5'
+                    };
+                  } else if (isPolygon) {
+                    return {
+                      color: '#10b981',
+                      weight: 4,
+                      opacity: 0.9,
+                      fillColor: '#10b981',
+                      fillOpacity: 0.2,
+                      dashArray: '10, 5'
+                    };
+                  } else {
+                    return {
+                      color: '#10b981',
+                      weight: 4,
+                      opacity: 0.8,
+                      fillOpacity: 0.0
+                    };
+                  }
+                },
+                onEachFeature: (feature: any, layer: any) => {
+                  layer.bindPopup('南水北调路线<br/>South-North Water Transfer Project');
+                }
+              });
+
+              map._swntpLayer = swntpLayer;
+              swntpLayer.addTo(map._overlayGroup);
+            }
+          } catch (swntpError) {
+            console.error('Failed to load SNWTP during initial load:', swntpError);
+          }
+        }
+
         // Hide loading overlay after map is fully initialized
         setLoading(false);
 
@@ -201,6 +256,90 @@ export function LeafletMap({ id, className = "", height = "400px" }: LeafletMapP
       }
     };
   }, []);
+
+  // Handle SNWTP layer toggle
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L || loading || !mapInstanceRef.current._overlayGroup) {
+      return;
+    }
+
+    const map = mapInstanceRef.current;
+    const loadSWNTPLayer = async () => {
+      try {
+        // Remove existing SNWTP layer if it exists
+        if (map._swntpLayer) {
+          map._overlayGroup.removeLayer(map._swntpLayer);
+          map._swntpLayer = null;
+        }
+
+        // Add SNWTP layer if showSNWTP is true
+        if (showSNWTP) {
+          const swntpData: YellowRiverBasinData = await getSWNP();
+
+          if (!swntpData.features || swntpData.features.length === 0) {
+            console.warn('⚠️ SNWTP data is empty');
+            return;
+          }
+
+          // Enhanced styling to ensure visibility
+          const swntpLayer = window.L.geoJSON(swntpData, {
+            style: (feature: any) => {
+              // Different styles for different geometry types
+              const geomType = feature?.geometry?.type;
+              const isLine = geomType === 'LineString' || geomType === 'MultiLineString';
+              const isPolygon = geomType === 'Polygon' || geomType === 'MultiPolygon';
+
+              if (isLine) {
+                return {
+                  color: '#10b981',
+                  weight: 5,
+                  opacity: 1.0,
+                  fillOpacity: 0.0,
+                  dashArray: '10, 5'
+                };
+              } else if (isPolygon) {
+                return {
+                  color: '#10b981',
+                  weight: 4,
+                  opacity: 0.9,
+                  fillColor: '#10b981',
+                  fillOpacity: 0.2,
+                  dashArray: '10, 5'
+                };
+              } else {
+                return {
+                  color: '#10b981',
+                  weight: 4,
+                  opacity: 0.8,
+                  fillOpacity: 0.0
+                };
+              }
+            },
+            onEachFeature: (feature: any, layer: any) => {
+              layer.bindPopup('南水北调路线<br/>South-North Water Transfer Project');
+            }
+          });
+
+          map._swntpLayer = swntpLayer;
+          swntpLayer.addTo(map._overlayGroup);
+
+          // Fit bounds to show SNWTP route if it exists
+          try {
+            const bounds = swntpLayer.getBounds();
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50] });
+            }
+          } catch (e) {
+            // Silent fail - bounds fitting is optional
+          }
+        }
+      } catch (swntpError: any) {
+        console.error('❌ Failed to toggle SNWTP layer:', swntpError);
+      }
+    };
+
+    loadSWNTPLayer();
+  }, [showSNWTP, loading]);
 
   return (
     <div

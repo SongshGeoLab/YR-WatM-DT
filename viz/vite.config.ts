@@ -55,5 +55,42 @@
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        // Proxy API requests to backend
+        '/api': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        // Proxy specific backend endpoints directly
+        '/swntp': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/yellow-river-basin': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/climate-data': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/variables': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/params': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/series': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/resolve_scenario': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+      },
     },
   });

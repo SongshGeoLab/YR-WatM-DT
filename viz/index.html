@@ -13,6 +13,18 @@
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+      <!-- Suppress Firefox deprecation warnings for MouseEvent.mozPressure and MouseEvent.mozInputSource -->
+      <script>
+        // Suppress Firefox deprecation warnings for Leaflet compatibility
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          const message = args.join(' ');
+          if (message.includes('MouseEvent.mozPressure') || message.includes('MouseEvent.mozInputSource')) {
+            return; // Suppress these specific warnings
+          }
+          originalWarn.apply(console, args);
+        };
+      </script>
     </head>
 
     <body>

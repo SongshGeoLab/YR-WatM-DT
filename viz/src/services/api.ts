@@ -242,6 +242,30 @@ export async function getYellowRiverBasin(): Promise<YellowRiverBasinData> {
 }
 
 /**
+ * Get South-North Water Transfer Project route as GeoJSON.
+ *
+ * @returns GeoJSON containing the SNWTP route geometry.
+ */
+export async function getSWNP(): Promise<YellowRiverBasinData> {
+  try {
+    const url = '/swntp';
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ SNWTP API error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch SNWTP data: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to fetch SNWTP data:', error);
+    throw error;
+  }
+}
+
+/**
  * Multi-scenario query interfaces (new /series/multi endpoint)
  */
 

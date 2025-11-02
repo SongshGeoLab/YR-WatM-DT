@@ -22,6 +22,7 @@ Data Endpoints:
     GET  /climate-data              -> RCP scenario climate data
     GET  /yellow-river-basin        -> basin boundary GeoJSON
     GET  /basin/geojson             -> basin boundary GeoJSON (alias)
+    GET  /swntp                     -> South-North Water Transfer Project route GeoJSON
     GET  /page5-data                -> water demand analysis
 
 Run:
@@ -56,8 +57,13 @@ from src.core.config_loader import get_config_loader
 # Add src to path for config loader
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-DATA_PARQUET = Path("data_parquet")
-DATA_DIR = Path("data")
+# Use absolute paths to avoid issues with working directory
+# Get the project root directory (parent of scripts/)
+_SCRIPT_DIR = Path(__file__).parent.absolute()
+_PROJECT_ROOT = _SCRIPT_DIR.parent.absolute()
+
+DATA_PARQUET = _PROJECT_ROOT / "data_parquet"
+DATA_DIR = _PROJECT_ROOT / "data"
 GEOJSON_CACHE: Dict[str, dict] = {}
 _VARIABLES_MAP_CACHE: Optional[Dict[str, str]] = None  # original_name -> safe_name
 
@@ -213,6 +219,7 @@ def root() -> dict:
             "/series/statistics?variable=YRB%20WSI&scenario=sc_0",
             "/analysis/sensitivity?vary_param=Fertility%20Variation&metric=cv&top_n=10",
             "/basin/geojson",
+            "/swntp",
             "/config/terminology",
             "/config/scenarios_preset",
             "/config/explanations",
@@ -1088,6 +1095,84 @@ async def get_yellow_river_basin():
         raise HTTPException(
             status_code=500, detail=f"Error loading Yellow River Basin data: {str(e)}"
         )
+
+
+def _get_swntp_geojson() -> dict:
+    """Read South-North Water Transfer Project shapefile and return GeoJSON.
+
+    Returns:
+        GeoJSON dict of the SNWTP route.
+    """
+    if "swntp" in GEOJSON_CACHE:
+        return GEOJSON_CACHE["swntp"]
+
+    try:
+        # Path to SWNP shapefile in data directory
+        shp_folder = DATA_DIR / "shp" / "SWNP"
+        shp_file = shp_folder / "SWNP.shp"
+
+        if not shp_file.exists():
+            raise FileNotFoundError(f"SWNP shapefile not found: {shp_file}")
+
+        # Read shapefile using geopandas
+        gdf = gpd.read_file(shp_file)
+
+        # Convert to WGS84 if not already
+        if gdf.crs and str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+
+        # Convert to GeoJSON
+        geojson = json.loads(gdf.to_json())
+
+        GEOJSON_CACHE["swntp"] = geojson
+        return geojson
+
+    except Exception as e:
+        # Log the error for debugging
+        import traceback
+
+        print(f"❌ Error loading SWNP shapefile: {str(e)}")
+        traceback.print_exc()
+        # Fallback: return empty FeatureCollection with error info
+        return {"type": "FeatureCollection", "features": [], "error": str(e)}
+
+
+@app.get("/swntp")
+async def get_swntp():
+    """Get South-North Water Transfer Project route as GeoJSON.
+
+    Returns:
+        GeoJSON containing the SNWTP route geometry.
+    """
+    try:
+        # Clear cache if it contains an error or is empty
+        if "swntp" in GEOJSON_CACHE:
+            cached = GEOJSON_CACHE["swntp"]
+            if "error" in cached or len(cached.get("features", [])) == 0:
+                del GEOJSON_CACHE["swntp"]
+
+        geojson = _get_swntp_geojson()
+
+        # Check if there's an error in the geojson
+        if "error" in geojson:
+            error_msg = geojson.get("error", "Unknown error")
+            print(f"⚠️ SNWTP error: {error_msg}")
+            return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+        # Validate that we have valid GeoJSON
+        if not isinstance(geojson, dict) or "type" not in geojson:
+            return {"type": "FeatureCollection", "features": []}
+
+        return geojson
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error in /swntp endpoint: {error_msg}")
+        import traceback
+
+        traceback.print_exc()
+        # Return empty FeatureCollection instead of raising exception
+        # This ensures we always return valid GeoJSON
+        return {"type": "FeatureCollection", "features": [], "error": error_msg}
 
 
 @app.get("/analysis/sensitivity")
