@@ -372,7 +372,7 @@ export default function WaterStressIndexPage() {
           <div className="space-y-3">
             {fireGenerationShare !== null ? (
               <ParameterSlider
-                label="Fire Generation Share Province Target (Global)"
+                label="Fire Generation Share Province Target"
                 min={parameterRanges.fire?.min || 0.1}
                 max={parameterRanges.fire?.max || 0.4}
                 step={parameterRanges.fire?.step || 0.01}

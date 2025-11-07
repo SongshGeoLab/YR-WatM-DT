@@ -67,9 +67,9 @@ const ScenarioContext = createContext<ScenarioContextState | undefined>(undefine
  */
 const DEFAULT_PARAMETERS: ScenarioParameters = {
   climateScenario: 1, // Low emissions (SSP1-2.6)
-  fertility: 1.6, // Low fertility
-  dietPattern: 1, // Traditional diet (low meat)
-  ecologicalFlow: 0.3, // High ecological protection
+  fertility: 1.8, // High fertility
+  dietPattern: 3, // High Protein (high meat)
+  ecologicalFlow: 0.2, // Ecological flow ratio
   irrigationEfficiency: 1.0, // High irrigation efficiency
   fireGenerationShare: 0.1, // Low fire generation share
 };

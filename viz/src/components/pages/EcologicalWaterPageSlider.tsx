@@ -140,10 +140,6 @@ const EcologicalWaterChart = ({ data, snwtpEnabled, ecoFlowValue }: {
       height="600px"
       data={plotData}
       layout={{
-        title: {
-          text: 'Ecological Water Flow - Multi-Scenario Analysis',
-          font: { size: 18 }
-        },
         xaxis: {
           title: 'Year',
           range: [2020, 2100]
@@ -155,11 +151,13 @@ const EcologicalWaterChart = ({ data, snwtpEnabled, ecoFlowValue }: {
         plot_bgcolor: 'transparent',
         paper_bgcolor: 'transparent',
         hovermode: 'x unified',
+        margin: { l: 70, r: 30, t: 20, b: 60 },
         legend: {
           yanchor: 'top',
-          y: 0.99,
+          y: 0.98,
           xanchor: 'left',
-          x: 0.01
+          x: 0.01,
+          font: { size: 11 }
         }
       }}
       config={{ responsive: true, displaylogo: false }}
@@ -223,7 +221,7 @@ export function EcologicalWaterPageSlider() {
         );
 
         if ('series' in result) {
-          const enhancedResult = {
+          const enhancedResult: any = {
             series: {
               time: result.series.time,
               value: result.series.mean,
@@ -236,7 +234,7 @@ export function EcologicalWaterPageSlider() {
               n_scenarios: result.n_scenarios
             },
             filter_summary: result.filter_summary,
-            isSingleScenario: result.isSingleScenario,
+            isSingleScenario: (result as any).isSingleScenario || false,
             n_scenarios: result.n_scenarios
           };
           setSurfaceWaterData(enhancedResult);
@@ -391,7 +389,7 @@ export function EcologicalWaterPageSlider() {
       </div>
 
       {/* Main Chart */}
-      <div className="mt-6">
+      <div className="mt-4">
         {loading ? (
           <div className="flex items-center justify-center h-96">
             <div className="text-center">

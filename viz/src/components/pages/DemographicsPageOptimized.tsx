@@ -323,17 +323,28 @@ export default function DemographicsPageOptimized() {
   const isLoading = populationLoading || domesticLoading || oaLoading;
   const hasError = populationError || domesticError || oaError;
 
-  // Calculate statistics for display
+  // Calculate statistics for display - only consider data from 2020 onwards
   const statistics = useMemo(() => {
     if (!populationData?.series || !domesticData?.series || !oaData?.series) return null;
 
     const getStats = (series: any) => {
       const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
-      if (!values || values.length === 0) return null;
+      const time = series.time;
+      if (!values || !time || values.length === 0 || values.length !== time.length) return null;
 
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const avg = values.reduce((sum: number, val: number) => sum + val, 0) / values.length;
+      // Filter to only consider data from 2020 onwards
+      const filteredValues: number[] = [];
+      for (let i = 0; i < time.length; i++) {
+        if (time[i] >= 2020) {
+          filteredValues.push(values[i]);
+        }
+      }
+
+      if (filteredValues.length === 0) return null;
+
+      const min = Math.min(...filteredValues);
+      const max = Math.max(...filteredValues);
+      const avg = filteredValues.reduce((sum: number, val: number) => sum + val, 0) / filteredValues.length;
 
       return { min, max, avg };
     };
@@ -345,19 +356,30 @@ export default function DemographicsPageOptimized() {
     };
   }, [populationData, domesticData, oaData, scenarioResult]);
 
-  // Peak helpers
+  // Peak helpers - only consider data from 2020 onwards
   const computePeakInfo = (seriesContainer: any) => {
     if (!seriesContainer?.series) return null;
     const series = seriesContainer.series;
     const values = scenarioResult?.isSingleScenario ? series.value : series.mean;
     const time = series.time;
     if (!values || !time || values.length === 0 || time.length === 0 || values.length !== time.length) return null;
-    let maxValue = values[0];
-    let peakYear = time[0];
-    for (let i = 1; i < values.length; i++) {
-      if (values[i] > maxValue) {
-        maxValue = values[i];
-        peakYear = time[i];
+
+    // Filter to only consider data from 2020 onwards
+    const filteredData: Array<{ year: number; value: number }> = [];
+    for (let i = 0; i < time.length; i++) {
+      if (time[i] >= 2020) {
+        filteredData.push({ year: time[i], value: values[i] });
+      }
+    }
+
+    if (filteredData.length === 0) return null;
+
+    let maxValue = filteredData[0].value;
+    let peakYear = filteredData[0].year;
+    for (let i = 1; i < filteredData.length; i++) {
+      if (filteredData[i].value > maxValue) {
+        maxValue = filteredData[i].value;
+        peakYear = filteredData[i].year;
       }
     }
     return {
@@ -417,7 +439,7 @@ export default function DemographicsPageOptimized() {
           <div className="space-y-3">
             {fertility !== null ? (
           <ParameterSlider
-                label="Fertility Rate (Global)"
+                label="Fertility Rate"
             min={1.6}
             max={1.8}
             step={0.05}
@@ -445,7 +467,7 @@ export default function DemographicsPageOptimized() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <label className="font-medium text-foreground">Diet Pattern (Global)</label>
+                <label className="font-medium text-foreground">Diet Pattern</label>
                 <ExplanationPopover explanationKey="diet_water_footprint" lang="en" iconSize={14} />
               </div>
               <Tooltip>
