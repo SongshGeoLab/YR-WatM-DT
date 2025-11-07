@@ -23,6 +23,9 @@ Data Endpoints:
     GET  /yellow-river-basin        -> basin boundary GeoJSON
     GET  /basin/geojson             -> basin boundary GeoJSON (alias)
     GET  /swntp                     -> South-North Water Transfer Project route GeoJSON
+    GET  /loess-plateau             -> Loess Plateau boundary GeoJSON
+    GET  /main-river                -> Yellow River main stream GeoJSON
+    GET  /stations                  -> Hydrologic stations GeoJSON
     GET  /page5-data                -> water demand analysis
 
 Run:
@@ -220,6 +223,9 @@ def root() -> dict:
             "/analysis/sensitivity?vary_param=Fertility%20Variation&metric=cv&top_n=10",
             "/basin/geojson",
             "/swntp",
+            "/loess-plateau",
+            "/main-river",
+            "/stations",
             "/config/terminology",
             "/config/scenarios_preset",
             "/config/explanations",
@@ -1172,6 +1178,207 @@ async def get_swntp():
         traceback.print_exc()
         # Return empty FeatureCollection instead of raising exception
         # This ensures we always return valid GeoJSON
+        return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+
+def _get_loess_plateau_geojson() -> dict:
+    """Read Loess Plateau shapefile and return GeoJSON.
+
+    Returns:
+        GeoJSON dict of the Loess Plateau boundary.
+    """
+    if "loess_plateau" in GEOJSON_CACHE:
+        return GEOJSON_CACHE["loess_plateau"]
+
+    try:
+        shp_folder = DATA_DIR / "shp" / "Losses"
+        shp_file = shp_folder / "loess_plateau.shp"
+
+        if not shp_file.exists():
+            raise FileNotFoundError(f"Loess Plateau shapefile not found: {shp_file}")
+
+        gdf = gpd.read_file(shp_file)
+
+        # Convert to WGS84 if not already
+        if gdf.crs and str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+
+        geojson = json.loads(gdf.to_json())
+        GEOJSON_CACHE["loess_plateau"] = geojson
+        return geojson
+
+    except Exception as e:
+        import traceback
+
+        print(f"❌ Error loading Loess Plateau shapefile: {str(e)}")
+        traceback.print_exc()
+        return {"type": "FeatureCollection", "features": [], "error": str(e)}
+
+
+def _get_main_river_geojson() -> dict:
+    """Read Yellow River main stream shapefile and return GeoJSON.
+
+    Returns:
+        GeoJSON dict of the Yellow River main stream.
+    """
+    if "main_river" in GEOJSON_CACHE:
+        return GEOJSON_CACHE["main_river"]
+
+    try:
+        shp_folder = DATA_DIR / "shp" / "mainRiver"
+        shp_file = shp_folder / "mainYR.shp"
+
+        if not shp_file.exists():
+            raise FileNotFoundError(f"Main River shapefile not found: {shp_file}")
+
+        gdf = gpd.read_file(shp_file)
+
+        # Convert to WGS84 if not already
+        if gdf.crs and str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+
+        geojson = json.loads(gdf.to_json())
+        GEOJSON_CACHE["main_river"] = geojson
+        return geojson
+
+    except Exception as e:
+        import traceback
+
+        print(f"❌ Error loading Main River shapefile: {str(e)}")
+        traceback.print_exc()
+        return {"type": "FeatureCollection", "features": [], "error": str(e)}
+
+
+@app.get("/loess-plateau")
+async def get_loess_plateau():
+    """Get Loess Plateau boundary as GeoJSON.
+
+    Returns:
+        GeoJSON containing the Loess Plateau boundary geometry.
+    """
+    try:
+        if "loess_plateau" in GEOJSON_CACHE:
+            cached = GEOJSON_CACHE["loess_plateau"]
+            if "error" in cached or len(cached.get("features", [])) == 0:
+                del GEOJSON_CACHE["loess_plateau"]
+
+        geojson = _get_loess_plateau_geojson()
+
+        if "error" in geojson:
+            error_msg = geojson.get("error", "Unknown error")
+            print(f"⚠️ Loess Plateau error: {error_msg}")
+            return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+        if not isinstance(geojson, dict) or "type" not in geojson:
+            return {"type": "FeatureCollection", "features": []}
+
+        return geojson
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error in /loess-plateau endpoint: {error_msg}")
+        import traceback
+
+        traceback.print_exc()
+        return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+
+@app.get("/main-river")
+async def get_main_river():
+    """Get Yellow River main stream as GeoJSON.
+
+    Returns:
+        GeoJSON containing the Yellow River main stream geometry.
+    """
+    try:
+        if "main_river" in GEOJSON_CACHE:
+            cached = GEOJSON_CACHE["main_river"]
+            if "error" in cached or len(cached.get("features", [])) == 0:
+                del GEOJSON_CACHE["main_river"]
+
+        geojson = _get_main_river_geojson()
+
+        if "error" in geojson:
+            error_msg = geojson.get("error", "Unknown error")
+            print(f"⚠️ Main River error: {error_msg}")
+            return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+        if not isinstance(geojson, dict) or "type" not in geojson:
+            return {"type": "FeatureCollection", "features": []}
+
+        return geojson
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error in /main-river endpoint: {error_msg}")
+        import traceback
+
+        traceback.print_exc()
+        return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+
+def _get_stations_geojson() -> dict:
+    """Read hydrologic stations shapefile and return GeoJSON.
+
+    Returns:
+        GeoJSON dict of the hydrologic stations.
+    """
+    if "stations" in GEOJSON_CACHE:
+        return GEOJSON_CACHE["stations"]
+
+    try:
+        shp_folder = DATA_DIR / "shp" / "stations"
+        shp_file = shp_folder / "5stations.shp"
+
+        if not shp_file.exists():
+            raise FileNotFoundError(f"Stations shapefile not found: {shp_file}")
+
+        gdf = gpd.read_file(shp_file)
+
+        # Convert to WGS84 if not already
+        if gdf.crs and str(gdf.crs) != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+
+        geojson = json.loads(gdf.to_json())
+        GEOJSON_CACHE["stations"] = geojson
+        return geojson
+
+    except Exception as e:
+        import traceback
+
+        print(f"❌ Error loading Stations shapefile: {str(e)}")
+        traceback.print_exc()
+        return {"type": "FeatureCollection", "features": [], "error": str(e)}
+
+
+@app.get("/stations")
+async def get_stations():
+    """Get hydrologic stations as GeoJSON.
+
+    Returns:
+        GeoJSON containing the hydrologic stations with their properties.
+    """
+    try:
+        if "stations" in GEOJSON_CACHE:
+            cached = GEOJSON_CACHE["stations"]
+            if "error" in cached or len(cached.get("features", [])) == 0:
+                del GEOJSON_CACHE["stations"]
+
+        geojson = _get_stations_geojson()
+
+        if "error" in geojson:
+            error_msg = geojson.get("error", "Unknown error")
+            print(f"⚠️ Stations error: {error_msg}")
+            return {"type": "FeatureCollection", "features": [], "error": error_msg}
+
+        if not isinstance(geojson, dict) or "type" not in geojson:
+            return {"type": "FeatureCollection", "features": []}
+
+        return geojson
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error in /stations endpoint: {error_msg}")
+        import traceback
+
+        traceback.print_exc()
         return {"type": "FeatureCollection", "features": [], "error": error_msg}
 
 

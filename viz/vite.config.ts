@@ -91,6 +91,18 @@
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
         },
+        '/loess-plateau': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/main-river': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/stations': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
       },
     },
   });

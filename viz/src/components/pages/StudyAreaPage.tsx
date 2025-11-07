@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LeafletMap } from '../maps/LeafletMap';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { HistoricalDataViewer } from '../charts/HistoricalDataViewer';
-import { Map, Droplets, Mountain, Calendar, Clock } from 'lucide-react';
+import { Map, Droplets, Mountain, Calendar, Clock, History } from 'lucide-react';
 
 /**
  * Study Area Page Component
@@ -11,9 +11,11 @@ import { Map, Droplets, Mountain, Calendar, Clock } from 'lucide-react';
  * and interactive map.
  */
 export default function StudyAreaPage() {
-  const [activeTab, setActiveTab] = useState<'discharge' | 'sediment'>('discharge');
+  const [activeTab, setActiveTab] = useState<'discharge' | 'sediment' | 'historical'>('discharge');
   const [currentYear, setCurrentYear] = useState<number>(2020);
   const [snwtpEnabled, setSnwtpEnabled] = useState(false);
+  const [loessPlateauEnabled, setLoessPlateauEnabled] = useState(false);
+  const [historicalData, setHistoricalData] = useState<any>(null);
 
   // River discharge data (from the successful RiverAnalysisPage)
   const dischargeData = useMemo(() => {
@@ -292,6 +294,85 @@ export default function StudyAreaPage() {
     name: 'Rivers'
   }], [sedimentData]);
 
+  // Load historical sediment data for the 2k year chart
+  useEffect(() => {
+    fetch('/historical_data.json')
+      .then(res => res.json())
+      .then(data => {
+        setHistoricalData(data);
+      })
+      .catch(err => {
+        console.error('Failed to load historical data:', err);
+      });
+  }, []);
+
+  // Historical sediment chart data (past 2000 years)
+  const historicalChartData = useMemo(() => {
+    if (!historicalData || !historicalData.raw_data || !historicalData.raw_data.sediment) {
+      return [];
+    }
+
+    const sedimentData = historicalData.raw_data.sediment;
+
+    // Filter data for the past 2000 years (from current year backwards, approximately 24 CE to present)
+    // Since data starts from -1175 BCE, we'll show all data from year 0 onwards (approximately 2000+ years)
+    const currentYear = new Date().getFullYear();
+    const startYear = Math.max(0, currentYear - 2000); // Show from year 0 CE or later
+    const filteredData = sedimentData.filter((d: any) => d.year >= startYear);
+
+    // Sort by year
+    filteredData.sort((a: any, b: any) => a.year - b.year);
+
+    return [{
+      type: 'scatter',
+      mode: 'lines+markers',
+      x: filteredData.map((d: any) => d.year),
+      y: filteredData.map((d: any) => d.value),
+      line: {
+        color: '#8E2D30',
+        width: 2
+      },
+      marker: {
+        size: 6,
+        color: '#8E2D30',
+        line: {
+          color: 'white',
+          width: 1
+        }
+      },
+      name: 'Sediment Load',
+      hovertemplate: '<b>Year:</b> %{x} CE<br><b>Sediment Load:</b> %{y:.2f} ×10⁸ t/year<extra></extra>'
+    }];
+  }, [historicalData]);
+
+  const historicalLayout = useMemo(() => ({
+    title: {
+      text: 'Historical Sediment Load (Past 2000 Years)',
+      x: 0.5,
+      xanchor: 'center',
+      font: { size: 18 }
+    },
+    xaxis: {
+      title: 'Year (CE)',
+      showgrid: true,
+      gridcolor: 'rgba(187, 187, 187, 0.6)',
+      gridwidth: 0.75,
+      griddash: 'dot'
+    },
+    yaxis: {
+      title: 'Sediment Load (×10⁸ t/year)',
+      showgrid: true,
+      gridcolor: 'rgba(187, 187, 187, 0.6)',
+      gridwidth: 0.75,
+      griddash: 'dot'
+    },
+    plot_bgcolor: 'white',
+    paper_bgcolor: 'transparent',
+    height: 450,
+    font: { family: 'Arial, sans-serif', size: 12 },
+    hovermode: 'x unified',
+    margin: { l: 70, r: 50, t: 50, b: 60 }
+  }), []);
 
   return (
     <div className="bg-card rounded-lg border-2 border-dashed border-border p-6 h-full overflow-auto">
@@ -312,18 +393,11 @@ export default function StudyAreaPage() {
 
       <div className="space-y-8">
         {/* Main content - Map and Description */}
-        <div className="flex gap-8 h-[500px]">
+        <div className="flex gap-8 h-[420px]">
           {/* Left side - River Analysis Charts */}
           <div className="flex-1 flex flex-col space-y-4 min-h-0">
             <div className="space-y-3 flex-shrink-0">
               <h3 className="font-semibold text-foreground text-lg">Global River Comparison</h3>
-              <div className="space-y-3 text-foreground leading-relaxed text-base">
-                <p>
-                  The Yellow River is globally famous for its exceptionally high sediment load
-                  relative to its water discharge. This unique characteristic distinguishes it from other major river
-                  systems worldwide.
-                </p>
-              </div>
             </div>
 
             {/* Tab buttons */}
@@ -350,6 +424,17 @@ export default function StudyAreaPage() {
                 <Mountain className="w-4 h-4 inline mr-2" />
                 River sediment load
               </button>
+              <button
+                onClick={() => setActiveTab('historical')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'historical'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <History className="w-4 h-4 inline mr-2" />
+                Historical sediment (2k years)
+              </button>
             </div>
 
             {/* Chart container */}
@@ -362,11 +447,19 @@ export default function StudyAreaPage() {
                   config={{ responsive: true, displayModeBar: false }}
                   height="100%"
                 />
-              ) : (
+              ) : activeTab === 'sediment' ? (
                 <PlotlyChart
                   id="sediment-chart"
                   data={sedimentChartData}
                   layout={sedimentLayout}
+                  config={{ responsive: true, displayModeBar: false }}
+                  height="100%"
+                />
+              ) : (
+                <PlotlyChart
+                  id="historical-sediment-chart"
+                  data={historicalChartData}
+                  layout={historicalLayout}
                   config={{ responsive: true, displayModeBar: false }}
                   height="100%"
                 />
@@ -376,32 +469,64 @@ export default function StudyAreaPage() {
 
           {/* Right side - Map */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="mb-3 flex-shrink-0 flex items-center justify-between">
-              <h3 className="font-semibold text-foreground mb-2 text-lg">Interactive Basin Map</h3>
-              {/* South-North Water Transfer Project Toggle */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">南水北调:</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSnwtpEnabled(false)}
-                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                      !snwtpEnabled
-                        ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 font-medium'
-                        : 'bg-card border-border text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    Off
-                  </button>
-                  <button
-                    onClick={() => setSnwtpEnabled(true)}
-                    className={`px-3 py-1.5 rounded-lg border-2 text-sm transition-all ${
-                      snwtpEnabled
-                        ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300 font-medium'
-                        : 'bg-card border-border text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    On
-                  </button>
+            <div className="mb-3 flex-shrink-0">
+              <div className="mb-3">
+                <h3 className="font-semibold text-foreground mb-3 text-lg">Interactive Basin Map</h3>
+                {/* Layer Controls */}
+                <div className="flex flex-wrap gap-3">
+                  {/* South-North Water Transfer Project Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">SNWTP:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSnwtpEnabled(false)}
+                        className={`px-2 py-1 rounded-lg border text-xs transition-all ${
+                          !snwtpEnabled
+                            ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        Off
+                      </button>
+                      <button
+                        onClick={() => setSnwtpEnabled(true)}
+                        className={`px-2 py-1 rounded-lg border text-xs transition-all ${
+                          snwtpEnabled
+                            ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300 font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        On
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Loess Plateau Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Loess Plateau:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setLoessPlateauEnabled(false)}
+                        className={`px-2 py-1 rounded-lg border text-xs transition-all ${
+                          !loessPlateauEnabled
+                            ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        Off
+                      </button>
+                      <button
+                        onClick={() => setLoessPlateauEnabled(true)}
+                        className={`px-2 py-1 rounded-lg border text-xs transition-all ${
+                          loessPlateauEnabled
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-700 dark:text-amber-300 font-medium'
+                            : 'bg-card border-border text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        On
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -411,6 +536,8 @@ export default function StudyAreaPage() {
                 height="100%"
                 className="w-full h-full rounded-lg"
                 showSNWTP={snwtpEnabled}
+                showLoessPlateau={loessPlateauEnabled}
+                showMainRiver={true}
               />
             </div>
           </div>

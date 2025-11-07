@@ -266,6 +266,78 @@ export async function getSWNP(): Promise<YellowRiverBasinData> {
 }
 
 /**
+ * Get Loess Plateau boundary as GeoJSON.
+ *
+ * @returns GeoJSON containing the Loess Plateau boundary geometry.
+ */
+export async function getLoessPlateau(): Promise<YellowRiverBasinData> {
+  try {
+    const url = '/loess-plateau';
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Loess Plateau API error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch Loess Plateau data: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to fetch Loess Plateau data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get Yellow River main stream as GeoJSON.
+ *
+ * @returns GeoJSON containing the Yellow River main stream geometry.
+ */
+export async function getMainRiver(): Promise<YellowRiverBasinData> {
+  try {
+    const url = '/main-river';
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Main River API error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch Main River data: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to fetch Main River data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get hydrologic stations as GeoJSON.
+ *
+ * @returns GeoJSON containing the hydrologic stations with their properties.
+ */
+export async function getStations(): Promise<YellowRiverBasinData> {
+  try {
+    const url = '/stations';
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Stations API error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch Stations data: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to fetch Stations data:', error);
+    throw error;
+  }
+}
+
+/**
  * Multi-scenario query interfaces (new /series/multi endpoint)
  */
 
