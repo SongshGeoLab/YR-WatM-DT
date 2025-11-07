@@ -295,18 +295,11 @@ export default function WaterDemandPageWithRealData() {
 
       {/* Parameter Controls - Top Row */}
       <div className="mb-6">
-        <div className="text-foreground text-base leading-relaxed mb-4">
-          <p>
-            <span className="font-medium">Water demand patterns vary significantly across different sectors.</span>
-            Irrigation and production water demands are influenced by agricultural efficiency,
-            industrial development, and energy generation policies across the Yellow River Basin.
-          </p>
-          {isLoading && (
-            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
-              🌐 Loading global scenario data...
-            </div>
-          )}
-        </div>
+        {isLoading && (
+          <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
+            🌐 Loading global scenario data...
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Irrigation Efficiency Parameter */}

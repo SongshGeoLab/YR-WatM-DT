@@ -25,7 +25,6 @@ function AppInner() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showGlobalParams, setShowGlobalParams] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { scenarioResult, loading } = useScenario();
 
   // Initialize dark mode from localStorage or system preference
   useEffect(() => {
@@ -107,46 +106,7 @@ function AppInner() {
 
   return (
     <div className="h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-md">
-              <Waves className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Yellow River Basin Water Resource Analysis
-              </h1>
-              <p className="text-xs text-muted-foreground">Interactive Data Visualization & Scenario Analysis Platform</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-                   {scenarioResult && (
-                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                       scenarioResult.isSingleScenario
-                         ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                         : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
-                     }`}>
-                       {scenarioResult.isSingleScenario
-                         ? `Scenario: ${scenarioResult.primaryScenario}`
-                         : `Multiple Scenarios (${scenarioResult.count || '?'})`
-                       }
-                     </span>
-                   )}
-                   {loading && (
-                     <span className="px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-full text-xs font-medium animate-pulse">
-                       Loading...
-                     </span>
-                   )}
-            <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
-              2020-2100 Projection
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-screen">
         {/* Sidebar Navigation */}
         <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-card border-r border-border flex flex-col transition-all duration-300`}>
           {/* Sidebar Header with Toggle */}
@@ -271,7 +231,7 @@ function AppInner() {
             <GlobalParameterPanel onClose={() => setShowGlobalParams(false)} />
           )}
 
-          <div className="w-full h-full max-h-[calc(100vh-6rem)]">
+          <div className="w-full h-full">
             {renderPage()}
           </div>
         </div>

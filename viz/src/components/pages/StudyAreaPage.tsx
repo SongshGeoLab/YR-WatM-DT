@@ -3,6 +3,7 @@ import { LeafletMap } from '../maps/LeafletMap';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { HistoricalDataViewer } from '../charts/HistoricalDataViewer';
 import { Map, Droplets, Mountain, Calendar, Clock, History } from 'lucide-react';
+import { useScenario } from '../../contexts/ScenarioContext';
 
 /**
  * Study Area Page Component
@@ -16,6 +17,7 @@ export default function StudyAreaPage() {
   const [snwtpEnabled, setSnwtpEnabled] = useState(false);
   const [loessPlateauEnabled, setLoessPlateauEnabled] = useState(false);
   const [historicalData, setHistoricalData] = useState<any>(null);
+  const { scenarioResult, loading } = useScenario();
 
   // River discharge data (from the successful RiverAnalysisPage)
   const dischargeData = useMemo(() => {
@@ -382,12 +384,29 @@ export default function StudyAreaPage() {
         </div>
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-foreground">Introduction</h1>
+            <h1 className="text-4xl font-bold text-foreground">Yellow River Basin Water Management</h1>
             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
               Page 1
             </span>
+            {scenarioResult && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                scenarioResult.isSingleScenario
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+              }`}>
+                {scenarioResult.isSingleScenario
+                  ? `Scenario: ${scenarioResult.primaryScenario}`
+                  : `Multiple Scenarios (${scenarioResult.count || '?'})`
+                }
+              </span>
+            )}
+            {loading && (
+              <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-medium animate-pulse">
+                Loading...
+              </span>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Yellow River Basin Overview</p>
+          <p className="text-sm text-muted-foreground mt-1">Interactive Data Visualization & Scenario Analysis Platform</p>
         </div>
       </div>
 
