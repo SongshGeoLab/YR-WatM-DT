@@ -464,8 +464,19 @@ export default function WaterAvailabilityPage() {
             <span className="px-3 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full text-sm font-medium">
               Page 2
             </span>
+            {scenarioResult && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                scenarioResult.isSingleScenario
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+              }`}>
+                {scenarioResult.isSingleScenario
+                  ? `Scenario: ${scenarioResult.primaryScenario}`
+                  : `Multiple Scenarios (${scenarioResult.count || '?'})`
+                }
+              </span>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">RCP Pathways & Surface Water Availability Projections</p>
         </div>
       </div>
 

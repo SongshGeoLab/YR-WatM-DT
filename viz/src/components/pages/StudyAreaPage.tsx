@@ -436,7 +436,6 @@ export default function StudyAreaPage() {
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Interactive Data Visualization & Scenario Analysis Platform</p>
         </div>
       </div>
 

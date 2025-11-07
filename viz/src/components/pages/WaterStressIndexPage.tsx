@@ -333,15 +333,24 @@ export default memo(function WaterQualityPage() {
             <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">
               Page 7
             </span>
+            {scenarioResult && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                scenarioResult.isSingleScenario
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+              }`}>
+                {scenarioResult.isSingleScenario
+                  ? `Scenario: ${scenarioResult.primaryScenario}`
+                  : `Multiple Scenarios (${scenarioResult.count || '?'})`
+                }
+              </span>
+            )}
+            {isLoading && (
+              <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-medium animate-pulse">
+                Loading...
+              </span>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isLoading ? 'Loading data...' :
-             hasError ? 'Error loading data' :
-             scenarioResult?.isSingleScenario ?
-               `Scenario: ${scenarioResult.primaryScenario}` :
-               `Multiple Scenarios (${scenarioResult?.count || '?'})`
-            } | Water Stress Index Monitoring & Analysis
-          </p>
         </div>
       </div>
 

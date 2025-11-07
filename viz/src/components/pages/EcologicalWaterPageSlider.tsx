@@ -177,7 +177,7 @@ const EcologicalWaterChart = ({ data, snwtpEnabled, ecoFlowValue }: {
  * 4. Real-time updates based on global parameters
  */
 export function EcologicalWaterPageSlider() {
-  const { parameters, updateParameter } = useScenario();
+  const { parameters, updateParameter, scenarioResult } = useScenario();
   const ecoFlowValue = parameters.ecologicalFlow || 0.25;
 
   // SNWTP toggle (local state, not global)
@@ -263,10 +263,24 @@ export function EcologicalWaterPageSlider() {
             <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
               Page 6
             </span>
+            {scenarioResult && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                scenarioResult.isSingleScenario
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+              }`}>
+                {scenarioResult.isSingleScenario
+                  ? `Scenario: ${scenarioResult.primaryScenario}`
+                  : `Multiple Scenarios (${scenarioResult.count || '?'})`
+                }
+              </span>
+            )}
+            {loading && (
+              <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-medium animate-pulse">
+                Loading...
+              </span>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {loading ? 'Loading data...' : error ? `Error: ${error}` : `Eco Flow: ${ecoFlowValue} | Scenarios: ${surfaceWaterData?.n_scenarios || 'Loading...'}`}
-          </p>
         </div>
       </div>
 
