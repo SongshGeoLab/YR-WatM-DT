@@ -1,14 +1,16 @@
-import React, { useMemo, useState, memo } from 'react';
+import React, { useMemo, useState, memo, useEffect } from 'react';
 import { PlotlyChart } from '../charts/PlotlyChart';
 import { Card } from '../ui/card';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { useScenario, useScenarioSeries } from '../../contexts/ScenarioContext';
 import { Activity, Gauge, Leaf, Scale, Factory, Droplets } from 'lucide-react';
 import { getPresetScenarios, PresetScenario } from '../../services/config';
+import * as api from '../../services/api';
 
 /**
  * Water Stress Index Chart Component
  * Shows water stress index over time with threshold lines
+ * Includes historical data (before 2020) and future projections
  */
 const WaterStressIndexChart = React.memo(({
   data,
@@ -19,18 +21,70 @@ const WaterStressIndexChart = React.memo(({
   scenarioResult: any;
   id: string;
 }) => {
-  const plotData = useMemo(() => {
-    if (!data?.series) return [];
+  const [historicalData, setHistoricalData] = useState<api.SeriesData | null>(null);
+  const [loadingHistorical, setLoadingHistorical] = useState(true);
 
-    const series = data.series;
+  // Fetch historical data (before 2020) using baseline scenario
+  useEffect(() => {
+    const fetchHistorical = async () => {
+      try {
+        setLoadingHistorical(true);
+        // Use baseline scenario for historical data
+        const historical = await api.getSeries('yrb_wsi', 'sc_1548', {
+          start_step: 0,
+          end_step: 20 // Assuming step 20 corresponds to year 2020
+        });
+        setHistoricalData(historical);
+      } catch (error) {
+        console.error('Failed to load historical WSI data:', error);
+      } finally {
+        setLoadingHistorical(false);
+      }
+    };
+    fetchHistorical();
+  }, []);
+
+  const plotData = useMemo(() => {
     const traces: any[] = [];
 
-    // Add confidence interval if available (multi-scenario mode)
-    if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+    // Combine historical and future data
+    let allTime: number[] = [];
+    let allValues: number[] = [];
+    let allCILower: number[] | null = null;
+    let allCIUpper: number[] | null = null;
+
+    // Add historical data if available
+    if (historicalData?.series) {
+      const histTime = historicalData.series.time.filter((t: number) => t < 2020);
+      const histValues = historicalData.series.value.slice(0, histTime.length);
+      allTime = [...histTime];
+      allValues = [...histValues];
+    }
+
+    // Add future data
+    if (data?.series) {
+      const series = data.series;
+      const futureTime = series.time;
+      const futureValues = series.mean || series.value;
+
+      allTime = [...allTime, ...futureTime];
+      allValues = [...allValues, ...futureValues];
+
+      // Add confidence intervals for future data if available
+      if (scenarioResult && !scenarioResult.isSingleScenario && series.ci_lower && series.ci_upper) {
+        allCILower = [...(allCILower || []), ...series.ci_lower];
+        allCIUpper = [...(allCIUpper || []), ...series.ci_upper];
+      }
+    }
+
+    if (allTime.length === 0) return [];
+
+    // Add confidence interval if available (multi-scenario mode, only for future)
+    if (allCILower && allCIUpper && data?.series) {
       // Lower bound (invisible)
       traces.push({
-        x: series.time,
-        y: series.ci_lower,
+        x: data.series.time,
+        y: allCILower.slice(allCILower.length - data.series.time.length),
         type: 'scatter',
         mode: 'lines',
         line: { width: 0 },
@@ -40,8 +94,8 @@ const WaterStressIndexChart = React.memo(({
 
       // Upper bound with fill
       traces.push({
-        x: series.time,
-        y: series.ci_upper,
+        x: data.series.time,
+        y: allCIUpper.slice(allCIUpper.length - data.series.time.length),
         type: 'scatter',
         mode: 'lines',
         fill: 'tonexty',
@@ -52,10 +106,10 @@ const WaterStressIndexChart = React.memo(({
       });
     }
 
-    // Main data line
+    // Main data line (combined historical + future)
     traces.push({
-      x: series.time,
-      y: series.mean || series.value,
+      x: allTime,
+      y: allValues,
       type: 'scatter',
       mode: 'lines',
       line: { color: '#6366f1', width: 3 },
@@ -63,61 +117,144 @@ const WaterStressIndexChart = React.memo(({
       hovertemplate: 'Year: %{x}<br>Water Stress Index: %{y:.3f}<extra></extra>'
     });
 
-    // Add threshold reference lines
+    // Add threshold reference lines (spanning full range)
+    const minYear = Math.min(...allTime);
+    const maxYear = Math.max(...allTime);
+
     // Low Stress threshold (<0.4)
     traces.push({
-      x: [series.time[0], series.time[series.time.length - 1]],
+      x: [minYear, maxYear],
       y: [0.4, 0.4],
       type: 'scatter',
       mode: 'lines',
       line: { color: '#10b981', width: 2, dash: 'dash' },
       name: 'Low Stress Threshold (<0.4)',
       hovertemplate: 'Low Stress Threshold: 0.4<br>Water resources abundant<extra></extra>',
-      showlegend: true
+      showlegend: false
     });
 
     // High Stress threshold (>0.6)
     traces.push({
-      x: [series.time[0], series.time[series.time.length - 1]],
+      x: [minYear, maxYear],
       y: [0.6, 0.6],
       type: 'scatter',
       mode: 'lines',
       line: { color: '#ef4444', width: 2, dash: 'dash' },
       name: 'High Stress Threshold (>0.6)',
       hovertemplate: 'High Stress Threshold: 0.6<br>Critical water scarcity risk<extra></extra>',
-      showlegend: true
+      showlegend: false
     });
 
     return traces;
-  }, [data, scenarioResult]);
+  }, [data, scenarioResult, historicalData]);
 
-  const layout = useMemo(() => ({
-    margin: { l: 70, r: 30, t: 40, b: 60 },
-    xaxis: {
-      title: 'Year',
-      titlefont: { size: 14 },
-      tickfont: { size: 12 },
-      range: [2020, 2100],
-      dtick: 20
-    },
-    yaxis: {
-      title: 'Water Stress Index',
-      titlefont: { size: 14 },
-      tickfont: { size: 12 },
-      range: [0, 1], // Fixed Y-axis range
-      dtick: 0.2
-    },
-    hovermode: 'x unified',
-    showlegend: true, // Enable legend to show threshold lines
-    legend: {
-      x: 0.02,
-      y: 0.02, // Move legend to bottom left
-      bgcolor: 'rgba(255,255,255,0.8)',
-      bordercolor: 'rgba(0,0,0,0.2)',
-      borderwidth: 1
-    },
-    autosize: true
-  }), []);
+  const layout = useMemo(() => {
+    // Detect dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+
+    // Determine time range
+    let minYear = 2020;
+    let maxYear = 2100;
+
+    if (historicalData?.series) {
+      const histTime = historicalData.series.time.filter((t: number) => t < 2020);
+      if (histTime.length > 0) {
+        minYear = Math.min(...histTime);
+      }
+    }
+
+    if (data?.series && data.series.time.length > 0) {
+      maxYear = Math.max(...data.series.time);
+    }
+
+    // Color scheme based on theme
+    const lineColor = isDarkMode ? '#818cf8' : '#6366f1'; // Lighter indigo for dark mode
+    const annotationBg = isDarkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)'; // Dark slate for dark mode
+    const annotationText = isDarkMode ? '#f1f5f9' : '#1e293b'; // Light text for dark mode
+    const annotationBorder = isDarkMode ? '#818cf8' : '#6366f1';
+
+    return {
+      plot_bgcolor: isDarkMode ? 'rgba(0, 0, 0, 0)' : 'rgba(255, 255, 255, 0)',
+      paper_bgcolor: 'transparent',
+      margin: { l: 70, r: 30, t: 40, b: 60 },
+      xaxis: {
+        title: 'Year',
+        titlefont: { size: 14 },
+        tickfont: { size: 12 },
+        range: [minYear, maxYear],
+        dtick: Math.ceil((maxYear - minYear) / 8) // Auto-adjust tick interval
+      },
+      yaxis: {
+        title: 'Water Stress Index',
+        titlefont: { size: 14 },
+        tickfont: { size: 12 },
+        range: [0.2, 1], // Fixed Y-axis range
+        dtick: 0.2
+      },
+      // Add vertical line at 2020 to separate historical and future
+      shapes: [{
+        type: 'line',
+        xref: 'x',
+        yref: 'paper',
+        x0: 2020,
+        y0: 0,
+        x1: 2020,
+        y1: 1,
+        line: {
+          color: lineColor, // Dynamic color based on theme
+          width: 3,
+          dash: 'dash'
+        },
+        layer: 'above'
+      }],
+      // Add annotations for historical and future periods (at bottom, where legend was)
+      annotations: [
+        {
+          x: 2020,
+          y: 0.02,
+          xref: 'x',
+          yref: 'paper',
+          text: '<b>Historical Period</b>',
+          showarrow: false,
+          font: {
+            size: 14,
+            color: annotationText, // Dynamic text color
+            family: 'Arial, sans-serif'
+          },
+          xanchor: 'right',
+          xshift: -10,
+          bgcolor: annotationBg, // Dynamic background
+          bordercolor: annotationBorder, // Dynamic border
+          borderwidth: 2,
+          borderpad: 6,
+          align: 'center'
+        },
+        {
+          x: 2020,
+          y: 0.02,
+          xref: 'x',
+          yref: 'paper',
+          text: '<b>Future Projection</b>',
+          showarrow: false,
+          font: {
+            size: 14,
+            color: annotationText, // Dynamic text color
+            family: 'Arial, sans-serif'
+          },
+          xanchor: 'left',
+          xshift: 10,
+          bgcolor: annotationBg, // Dynamic background
+          bordercolor: annotationBorder, // Dynamic border
+          borderwidth: 2,
+          borderpad: 6,
+          align: 'center'
+        }
+      ],
+      hovermode: 'x unified',
+      showlegend: false, // Disable legend
+      autosize: true
+    };
+  }, [data, historicalData]);
 
   return (
     <PlotlyChart
@@ -211,9 +348,6 @@ export default memo(function WaterQualityPage() {
       {/* Global Scenario Selection */}
       <div className="mb-8">
         <h2 className="text-2xl font-semibold text-foreground mb-4">Global Scenario Selection</h2>
-        <p className="text-lg text-muted-foreground mb-6">
-          Select a preset of parameters from three overall scenarios:
-        </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {displayScenarios.map((scenario) => {
             if (!scenario) return null;
