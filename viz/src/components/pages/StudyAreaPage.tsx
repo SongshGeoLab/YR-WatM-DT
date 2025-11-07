@@ -308,52 +308,63 @@ export default function StudyAreaPage() {
       });
   }, []);
 
-  // Historical sediment chart data (past 2000 years)
+  // Historical sediment and forest coverage chart data (past 2000 years) with dual y-axes
   const historicalChartData = useMemo(() => {
-    if (!historicalData || !historicalData.raw_data || !historicalData.raw_data.sediment) {
+    if (!historicalData || !historicalData.interpolated_data) {
       return [];
     }
 
-    const sedimentData = historicalData.raw_data.sediment;
+    const { years, sediment, forest } = historicalData.interpolated_data;
 
-    // Filter data for the past 2000 years (from current year backwards, approximately 24 CE to present)
-    // Since data starts from -1175 BCE, we'll show all data from year 0 onwards (approximately 2000+ years)
+    // Filter data for the past 2000 years (from current year backwards)
     const currentYear = new Date().getFullYear();
     const startYear = Math.max(0, currentYear - 2000); // Show from year 0 CE or later
-    const filteredData = sedimentData.filter((d: any) => d.year >= startYear);
 
-    // Sort by year
-    filteredData.sort((a: any, b: any) => a.year - b.year);
+    const filteredYears: number[] = [];
+    const filteredSediment: number[] = [];
+    const filteredForest: number[] = [];
 
-    return [{
-      type: 'scatter',
-      mode: 'lines+markers',
-      x: filteredData.map((d: any) => d.year),
-      y: filteredData.map((d: any) => d.value),
-      line: {
-        color: '#8E2D30',
-        width: 2
-      },
-      marker: {
-        size: 6,
-        color: '#8E2D30',
+    for (let i = 0; i < years.length; i++) {
+      if (years[i] >= startYear) {
+        filteredYears.push(years[i]);
+        filteredSediment.push(sediment[i]);
+        filteredForest.push(forest[i] * 100); // Convert to percentage
+      }
+    }
+
+    return [
+      // Sediment Load (left y-axis)
+      {
+        type: 'scatter',
+        mode: 'lines',
+        x: filteredYears,
+        y: filteredSediment,
         line: {
-          color: 'white',
-          width: 1
-        }
+          color: '#8E2D30',
+          width: 2
+        },
+        name: 'Sediment Load',
+        yaxis: 'y',
+        hovertemplate: '<b>Year:</b> %{x} CE<br><b>Sediment Load:</b> %{y:.2f} ×10⁸ t/year<extra></extra>'
       },
-      name: 'Sediment Load',
-      hovertemplate: '<b>Year:</b> %{x} CE<br><b>Sediment Load:</b> %{y:.2f} ×10⁸ t/year<extra></extra>'
-    }];
+      // Forest Coverage (right y-axis)
+      {
+        type: 'scatter',
+        mode: 'lines',
+        x: filteredYears,
+        y: filteredForest,
+        line: {
+          color: '#22c55e',
+          width: 2
+        },
+        name: 'Forest Coverage',
+        yaxis: 'y2',
+        hovertemplate: '<b>Year:</b> %{x} CE<br><b>Forest Coverage:</b> %{y:.2f}%<extra></extra>'
+      }
+    ];
   }, [historicalData]);
 
   const historicalLayout = useMemo(() => ({
-    title: {
-      text: 'Historical Sediment Load (Past 2000 Years)',
-      x: 0.5,
-      xanchor: 'center',
-      font: { size: 18 }
-    },
     xaxis: {
       title: 'Year (CE)',
       showgrid: true,
@@ -363,17 +374,36 @@ export default function StudyAreaPage() {
     },
     yaxis: {
       title: 'Sediment Load (×10⁸ t/year)',
+      titlefont: { size: 14, color: '#8E2D30' },
+      tickfont: { size: 12, color: '#8E2D30' },
       showgrid: true,
       gridcolor: 'rgba(187, 187, 187, 0.6)',
       gridwidth: 0.75,
-      griddash: 'dot'
+      griddash: 'dot',
+      side: 'left'
+    },
+    yaxis2: {
+      title: 'Forest Coverage (%)',
+      titlefont: { size: 14, color: '#22c55e' },
+      tickfont: { size: 12, color: '#22c55e' },
+      overlaying: 'y',
+      side: 'right',
+      showgrid: false
     },
     plot_bgcolor: 'white',
     paper_bgcolor: 'transparent',
     height: 450,
     font: { family: 'Arial, sans-serif', size: 12 },
     hovermode: 'x unified',
-    margin: { l: 70, r: 50, t: 50, b: 60 }
+    showlegend: true,
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'right',
+      x: 1
+    },
+    margin: { l: 70, r: 70, t: 50, b: 60 }
   }), []);
 
   return (
