@@ -7,7 +7,8 @@
 
 import { ScenarioParameters } from '../contexts/ScenarioContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+// Static data directory (built by scripts/build_static_data.py)
+const STATIC_DATA_URL = '/static-data';
 
 // ============================================================================
 // Type Definitions
@@ -83,28 +84,19 @@ export interface ExplanationContent {
  * @returns Promise resolving to terminology dictionary
  */
 export async function fetchTerminology(lang: string = 'en'): Promise<Terminology> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/config/terminology?lang=${lang}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch terminology: ${response.statusText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching terminology:', error);
-    // Return empty object on error
-    return {};
-  }
+  // Terminology is not used by any live code path; keep a stub.
+  return {};
 }
 
 /**
- * Fetch preset scenarios from backend.
+ * Fetch preset scenarios from static data.
  *
  * @param lang - Language code ('en' or 'cn')
  * @returns Promise resolving to array of preset scenarios
  */
 export async function fetchPresetScenarios(lang: string = 'en'): Promise<PresetScenario[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/config/scenarios_preset?lang=${lang}`);
+    const response = await fetch(`${STATIC_DATA_URL}/scenarios_preset.json`);
     if (!response.ok) {
       throw new Error(`Failed to fetch preset scenarios: ${response.statusText}`);
     }
@@ -121,20 +113,12 @@ export async function fetchPresetScenarios(lang: string = 'en'): Promise<PresetS
  * @returns Promise resolving to water stress configuration
  */
 export async function fetchWaterStressConfig(): Promise<WaterStressConfig | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/config/water_stress`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch water stress config: ${response.statusText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching water stress config:', error);
-    return null;
-  }
+  // Water stress config is not used by any live code path; keep a stub.
+  return null;
 }
 
 /**
- * Fetch explanation content for a specific topic.
+ * Fetch explanation content for a specific topic from static data.
  *
  * @param key - Explanation key (e.g., 'diet_water_footprint')
  * @param lang - Language code ('en' or 'cn')
@@ -145,14 +129,19 @@ export async function fetchExplanation(
   lang: string = 'en'
 ): Promise<ExplanationContent | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/config/explanations/${key}?lang=${lang}`);
+    const response = await fetch(`${STATIC_DATA_URL}/explanations.json`);
     if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error(`Failed to fetch explanation: ${response.statusText}`);
+      throw new Error(`Failed to fetch explanations: ${response.statusText}`);
     }
-    return await response.json();
+    const explanations = await response.json();
+    const item = explanations[key];
+    if (!item) {
+      return null;
+    }
+    return {
+      title: item.title?.[lang] ?? item.title?.en ?? key,
+      content: item.content?.[lang] ?? item.content?.en ?? '',
+    };
   } catch (error) {
     console.error(`Error fetching explanation for '${key}':`, error);
     return null;
