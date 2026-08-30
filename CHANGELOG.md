@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.0](https://github.com/SongshGeoLab/YR-WatM-DT/compare/v0.1.0...v0.2.0) (2026-08-12)
+
+
+### Features
+
+* **api:** :sparkles: add new endpoints for Loess Plateau, Main River, and Stations ([47ebbc0](https://github.com/SongshGeoLab/YR-WatM-DT/commit/47ebbc0673008e3fe6b24bfa433a3245f63eed7d))
+* **api:** :sparkles: add South-North Water Transfer Project (SNWTP) endpoint and visualization ([6515c43](https://github.com/SongshGeoLab/YR-WatM-DT/commit/6515c43207873ae8976a3b68c0d239f3b39ab265))
+* **deploy:** :rocket: convert backend data to static files for Vercel deployment ([8890bb4](https://github.com/SongshGeoLab/YR-WatM-DT/commit/8890bb4fc7467f1a4be0f93d4bd16182079d6b7b))
+* **pages:** :sparkles: enhance scenario display and loading indicators across multiple pages ([85ee138](https://github.com/SongshGeoLab/YR-WatM-DT/commit/85ee13848a7564f7a177c60505b00134e1b8d5e0))
+* **pages:** :sparkles: update demographic and ecological water pages for improved data handling and UI clarity ([7088218](https://github.com/SongshGeoLab/YR-WatM-DT/commit/7088218cfc4c4d05f17298a23139d34f0137b54c))
+* **scenarios:** :sparkles: add RCP 8.5 high emissions scenario and update climate scenario handling ([9185e55](https://github.com/SongshGeoLab/YR-WatM-DT/commit/9185e55bd02c5496eb9f954a2acd18f630f255a9))
+* **StudyAreaPage:** :sparkles: enhance historical chart to include forest coverage with dual y-axes ([7b4b94c](https://github.com/SongshGeoLab/YR-WatM-DT/commit/7b4b94cb5d28cb2144bc75562614e17b52cd03de))
+* **WaterStressIndexPage:** :sparkles: enhance Water Stress Index chart with historical data and improved layout ([b3b12aa](https://github.com/SongshGeoLab/YR-WatM-DT/commit/b3b12aae1ebe0bf9f5c7fbed6135480597f3f9be))
+
+
+### Bug Fixes
+
+* **deploy:** :bug: declare build output directory for Vercel ([2b0aead](https://github.com/SongshGeoLab/YR-WatM-DT/commit/2b0aead41ce9d0e19f4ae62dc05426eb4562bf6a))
+
+
+### Documentation
+
+* **storyline:** :memo: update Yellow River Basin storyline for clarity and depth ([6f9246f](https://github.com/SongshGeoLab/YR-WatM-DT/commit/6f9246fb32d0bdb543c61f465084c9674547f6b8))
+
 ## 0.1.0 (2025-10-22)
 
 
